@@ -33,7 +33,7 @@ class ManimService:
         
         cmd = [
             'manim',
-            '-ql',  # Low quality for speed, change to -qm or -qh for better quality
+            '-ql',
             '--disable_caching',
             '-o', f'{output_name}.mp4',
             temp_scene_file,
@@ -161,3 +161,22 @@ class DynamicScene{scene_index}(Scene):
             video_files.append(video_file)
         
         return video_files
+    
+    def generate_full_code(self, animation_ir: AnimationIR) -> str:
+        """
+        Generate complete Manim Python code for all scenes.
+        Returns the full code as a string without rendering.
+        """
+        code_parts = ["from manim import *\n\n"]
+        
+        for i, scene in enumerate(animation_ir.scenes):
+            code_parts.append(self._generate_scene_code(scene, i))
+            code_parts.append("\n\n")
+        
+        code_parts.append('if __name__ == "__main__":\n')
+        code_parts.append('    # Render all scenes\n')
+        for i in range(len(animation_ir.scenes)):
+            code_parts.append(f'    # scene = DynamicScene{i}()\n')
+            code_parts.append(f'    # scene.render()\n')
+        
+        return "".join(code_parts)

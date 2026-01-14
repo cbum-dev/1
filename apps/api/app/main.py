@@ -5,7 +5,7 @@ import os
 import uuid
 from pathlib import Path
 
-from .models import GenerateRequest, GenerateResponse
+from .models import GenerateRequest, GenerateResponse, AnimationIR
 from .services.gemini_service import GeminiService
 from .services.manim_service import ManimService
 from .services.video_service import VideoService
@@ -22,7 +22,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  
+    allow_origins=["http://localhost:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,6 +42,77 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.post("/generate-plan")
+async def generate_animation_plan(request: GenerateRequest):
+    """
+    Generate animation plan (JSON IR + Manim code) without rendering.
+    Returns JSON IR, validation status, and generated Manim code.
+    """
+    try:
+        print(f"Generating JSON IR for prompt: {request.prompt[:100]}...")
+        animation_ir = gemini_service.generate_animation_json(request.prompt)
+        
+        manim_code = manim_service.generate_full_code(animation_ir)
+        
+        description = _generate_description(animation_ir)
+        
+        return JSONResponse(content={
+            "success": True,
+            "json_ir": animation_ir.model_dump(),
+            "manim_code": manim_code,
+            "description": description,
+            "validation": {
+                "valid": True,
+                "errors": []
+            }
+        })
+        
+    except ValueError as e:
+        error_message = str(e)
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "json_ir": None,
+                "manim_code": None,
+                "description": None,
+                "validation": {
+                    "valid": False,
+                    "errors": [error_message]
+                }
+            }
+        )
+    except Exception as e:
+        print(f"Plan generation failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
+
+
+def _generate_description(animation_ir: AnimationIR) -> str:
+    """Generate a human-readable description of the animation"""
+    desc_parts = [f"**{animation_ir.metadata.get('title', 'Animation')}**\n"]
+    desc_parts.append(f"Duration: ~{animation_ir.metadata.get('duration_estimate', 0):.1f} seconds")
+    desc_parts.append(f"Scenes: {len(animation_ir.scenes)}\n")
+    
+    for i, scene in enumerate(animation_ir.scenes, 1):
+        desc_parts.append(f"**Scene {i}** ({scene.duration}s):")
+        desc_parts.append(f"- Background: {scene.background_color}")
+        desc_parts.append(f"- Objects: {len(scene.objects)}")
+        
+        for obj in scene.objects:
+            obj_desc = f"  • {obj.type.upper()}"
+            if obj.type == "text":
+                obj_desc += f": \"{obj.content}\""
+            elif obj.type == "shape":
+                obj_desc += f": {obj.shape}"
+            obj_desc += f" ({len(obj.animations)} animations)"
+            desc_parts.append(obj_desc)
+        desc_parts.append("")
+    
+    return "\n".join(desc_parts)
 
 
 @app.post("/generate")
