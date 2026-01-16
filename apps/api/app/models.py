@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Literal, Optional
+from datetime import datetime
 
 
 class Animation(BaseModel):
@@ -31,7 +32,6 @@ class AnimationObject(BaseModel):
     def validate_position(cls, v):
         if len(v) != 3:
             raise ValueError("Position must have exactly 3 coordinates [x, y, z]")
-        # Manim coordinate bounds
         if not (-7 <= v[0] <= 7 and -4 <= v[1] <= 4):
             raise ValueError("Position out of bounds: x in [-7,7], y in [-4,4]")
         return v
@@ -57,6 +57,36 @@ class AnimationIR(BaseModel):
         if len(v) > 20:
             raise ValueError("Too many scenes (max 20)")
         return v
+
+
+
+
+class ChatMessage(BaseModel):
+    """A single message in the conversation"""
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+    
+    role: Literal["user", "assistant"]
+    content: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    animation_state: Optional[AnimationIR] = None  
+
+
+class ConversationRequest(BaseModel):
+    """Request for conversational animation generation"""
+    message: str = Field(min_length=1, max_length=2000)
+    conversation_history: List[ChatMessage] = Field(default=[])
+    current_animation: Optional[AnimationIR] = None
+
+
+class ConversationResponse(BaseModel):
+    """Response with updated animation and chat message"""
+    success: bool
+    assistant_message: str
+    animation_ir: Optional[AnimationIR] = None
+    manim_code: Optional[str] = None
+    description: Optional[str] = None
+    validation: dict
+    conversation_history: List[ChatMessage]
 
 
 class GenerateRequest(BaseModel):

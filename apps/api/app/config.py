@@ -4,7 +4,9 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     GEMINI_API_KEY: str
-    MANIM_QUALITY: str = "medium_quality"  # low, medium, high
+    SYSTEM_PROMPT: str
+    MODIFICATION_PROMPT_TEMPLATE: str
+    MANIM_QUALITY: str = "medium_quality"  
     MAX_SCENE_DURATION: float = 10.0
     MAX_TOTAL_DURATION: float = 60.0
     TEMP_DIR: str = "/tmp/animations"
