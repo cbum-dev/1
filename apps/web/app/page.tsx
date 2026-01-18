@@ -1,5 +1,5 @@
-import AnimationGenerator from '@/components/animation-generator';
-// import ConversationalAnimator from '@/components/conversational-animator';
+import AnimationStudio from '@/components/animation-studio';
+
 export default function Home() {
-  return <AnimationGenerator />;
+  return <AnimationStudio />;
 }
