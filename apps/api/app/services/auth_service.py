@@ -2,27 +2,24 @@ from datetime import datetime, timedelta
 from typing import Optional
 import jwt
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 from ..models import User, UserCreate, UserTier, Token
+from ..database.models import DBUser, UserTierEnum
 from ..config import get_settings
+import uuid
 
 settings = get_settings()
-
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-USERS_DB: dict[str, User] = {}
-USER_CREDENTIALS: dict[str, str] = {}  
 
 
 class AuthService:
     def __init__(self):
         self.secret_key = settings.JWT_SECRET_KEY
         self.algorithm = "HS256"
-        self.access_token_expire_minutes = 60 * 24 * 7  
+        self.access_token_expire_minutes = 60 * 24 * 7  # 7 days
     
     def hash_password(self, password: str) -> str:
         """Hash a password"""
-        if len(password) > 256:
-            raise ValueError("Password must be 256 characters or fewer")
         return pwd_context.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -43,67 +40,99 @@ class AuthService:
         """Verify and decode JWT token"""
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            return payload
+            return {"user_id": payload.get("sub"), "email": payload.get("email")}
         except jwt.ExpiredSignatureError:
             return None
         except jwt.JWTError:
             return None
     
-    def register_user(self, user_data: UserCreate) -> Token:
-        if user_data.email in USER_CREDENTIALS:
+    def register_user(self, user_data: UserCreate, db: Session) -> Token:
+        """Register a new user"""
+        # Check if user exists
+        existing = db.query(DBUser).filter(DBUser.email == user_data.email).first()
+        if existing:
             raise ValueError("User already exists")
         
-        user = User(
+        # Create user
+        db_user = DBUser(
+            id=str(uuid.uuid4()),
             email=user_data.email,
             username=user_data.username,
-            tier=UserTier.FREE,
+            hashed_password=self.hash_password(user_data.password),
+            tier=UserTierEnum.FREE,
             credits_remaining=10
         )
         
-        USERS_DB[user.id] = user
-        USER_CREDENTIALS[user_data.email] = self.hash_password(user_data.password)
-
-        access_token = self.create_access_token(user.id, user.email)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        # Generate token
+        access_token = self.create_access_token(db_user.id, db_user.email)
+        
+        user = User(
+            id=db_user.id,
+            email=db_user.email,
+            username=db_user.username,
+            tier=db_user.tier,
+            credits_remaining=db_user.credits_remaining,
+            credits_used=db_user.credits_used,
+            animations_created=db_user.animations_created,
+            created_at=db_user.created_at.isoformat()
+        )
         
         return Token(access_token=access_token, user=user)
     
-    def login_user(self, email: str, password: str) -> Token:
-        if email not in USER_CREDENTIALS:
+    def login_user(self, email: str, password: str, db: Session) -> Token:
+        """Login user and return token"""
+        # Find user
+        db_user = db.query(DBUser).filter(DBUser.email == email).first()
+        
+        if not db_user:
             raise ValueError("Invalid credentials")
         
-        if not self.verify_password(password, USER_CREDENTIALS[email]):
+        # Verify password
+        if not self.verify_password(password, db_user.hashed_password):
             raise ValueError("Invalid credentials")
         
-        user = next((u for u in USERS_DB.values() if u.email == email), None)
-        if not user:
-            raise ValueError("User not found")
+        # Update last login
+        db_user.last_login = datetime.utcnow()
+        db.commit()
         
-        user.last_login = datetime.utcnow()
+        # Generate token
+        access_token = self.create_access_token(db_user.id, db_user.email)
         
-        access_token = self.create_access_token(user.id, user.email)
+        user = User(
+            id=db_user.id,
+            email=db_user.email,
+            username=db_user.username,
+            tier=db_user.tier,
+            credits_remaining=db_user.credits_remaining,
+            credits_used=db_user.credits_used,
+            animations_created=db_user.animations_created,
+            created_at=db_user.created_at.isoformat()
+        )
         
         return Token(access_token=access_token, user=user)
     
-    def get_current_user(self, token: str) -> Optional[User]:
+    def get_current_user(self, token: str) -> Optional[dict]:
         """Get user from token"""
         payload = self.verify_token(token)
-        if not payload:
-            return None
-        
-        user_id = payload.get("sub")
-        return USERS_DB.get(user_id)
+        return payload
     
     def check_credits(self, user: User) -> bool:
         """Check if user has credits remaining"""
         return user.credits_remaining > 0
     
-    def deduct_credit(self, user: User) -> None:
+    def deduct_credit(self, user: DBUser, db: Session) -> None:
         """Deduct one credit from user"""
         if user.credits_remaining > 0:
             user.credits_remaining -= 1
             user.credits_used += 1
             user.animations_created += 1
+            db.commit()
     
-    def add_credits(self, user: User, amount: int) -> None:
+    def add_credits(self, user: DBUser, amount: int, db: Session) -> None:
         """Add credits to user (for upgrades/purchases)"""
         user.credits_remaining += amount
+        db.commit()

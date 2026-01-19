@@ -1,16 +1,17 @@
-from fastapi import FastAPI, HTTPException, Depends, Header, status
+from fastapi import FastAPI, HTTPException, Depends, Header, Request, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from datetime import datetime
 import os
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from .models import (
-    GenerateRequest, AnimationIR, ConversationRequest,
-    ConversationResponse, ChatMessage, UserCreate, UserLogin,
-    Token, User, UserTier, TIER_LIMITS, RenderJob
+    GenerateRequest, AnimationIR, ConversationRequest, ConversationResponse,
+    UserCreate, UserLogin, Token, User, UserTier, TIER_LIMITS, RenderJob,
+    ChatMessage
 )
 from .services.gemini_service import GeminiService
 from .services.manim_service import ManimService
@@ -18,56 +19,111 @@ from .services.video_service import VideoService
 from .services.auth_service import AuthService
 from .services.template_service import TemplateService
 from .services.job_queue_service import JobQueueService
+from .services.stripe_service import StripeService
+from .services.marketplace_service import MarketplaceService
+from .database.database import get_db, init_db
+from .database.models import DBUser, DBMarketplaceItem, UserTierEnum
 from .config import get_settings
 
 settings = get_settings()
 security = HTTPBearer()
 
 app = FastAPI(
-    title="Animation Studio API (Enterprise)",
-    description="Professional 2D animation generation platform",
-    version="3.0.0"
+    title="Animation Studio API (Complete)",
+    description="Professional 2D animation platform with AI, payments, and marketplace",
+    version="4.0.0"
 )
 
+# Initialize database
+init_db()
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://yourdomain.com"],
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Services
 gemini_service = GeminiService()
 manim_service = ManimService()
 video_service = VideoService()
 auth_service = AuthService()
 template_service = TemplateService()
 job_queue_service = JobQueueService()
+stripe_service = StripeService()
+marketplace_service = MarketplaceService()
 
+# Rate limiting (simple in-memory, use Redis in production)
 RATE_LIMIT_STORE = {}
 
 
+# ==================== DEPENDENCIES ====================
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
     """Dependency to get current authenticated user"""
-    user = auth_service.get_current_user(credentials.credentials)
-    if not user:
+    token = credentials.credentials
+    user_data = auth_service.get_current_user(token)
+    
+    if not user_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"
         )
-    return user
+    
+    # Get user from database
+    db_user = db.query(DBUser).filter(DBUser.id == user_data["user_id"]).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return User(
+        id=db_user.id,
+        email=db_user.email,
+        username=db_user.username,
+        tier=db_user.tier,
+        credits_remaining=db_user.credits_remaining,
+        credits_used=db_user.credits_used,
+        animations_created=db_user.animations_created,
+        created_at=db_user.created_at.isoformat()
+    )
 
 
-async def get_optional_user(authorization: Optional[str] = Header(None)) -> Optional[User]:
+async def get_optional_user(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
     """Dependency to get user if authenticated, None otherwise"""
     if not authorization or not authorization.startswith("Bearer "):
         return None
+    
     token = authorization.replace("Bearer ", "")
-    return auth_service.get_current_user(token)
+    user_data = auth_service.get_current_user(token)
+    
+    if not user_data:
+        return None
+    
+    db_user = db.query(DBUser).filter(DBUser.id == user_data["user_id"]).first()
+    if not db_user:
+        return None
+    
+    return User(
+        id=db_user.id,
+        email=db_user.email,
+        username=db_user.username,
+        tier=db_user.tier,
+        credits_remaining=db_user.credits_remaining,
+        credits_used=db_user.credits_used,
+        animations_created=db_user.animations_created,
+        created_at=db_user.created_at.isoformat()
+    )
 
 
-def check_rate_limit(user: User) -> None:
+def check_rate_limit(user: User, db: Session) -> None:
     """Check if user has exceeded rate limits"""
     limits = TIER_LIMITS[user.tier]
     today = datetime.utcnow().date()
@@ -109,21 +165,40 @@ def validate_animation_limits(animation_ir: AnimationIR, user: User) -> None:
         )
 
 
+# ==================== ROOT ====================
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Animation Studio API (Complete)",
+        "version": "4.0.0",
+        "features": ["auth", "templates", "stripe", "marketplace", "audio", "chat"]
+    }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
+# ==================== AUTH ENDPOINTS ====================
 
 @app.post("/auth/register", response_model=Token)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
     try:
-        return auth_service.register_user(user_data)
+        token_response = auth_service.register_user(user_data, db)
+        return token_response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/login", response_model=Token)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     """Login and get access token"""
     try:
-        return auth_service.login_user(credentials.email, credentials.password)
+        token_response = auth_service.login_user(credentials.email, credentials.password, db)
+        return token_response
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
@@ -139,6 +214,8 @@ async def get_limits(current_user: User = Depends(get_current_user)):
     """Get user's tier limits"""
     return TIER_LIMITS[current_user.tier]
 
+
+# ==================== TEMPLATE ENDPOINTS ====================
 
 @app.get("/templates")
 async def list_templates(user: Optional[User] = Depends(get_optional_user)):
@@ -175,7 +252,8 @@ async def list_categories():
 async def apply_template(
     template_id: str,
     customizations: dict = None,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Apply a template with optional customizations"""
     try:
@@ -195,34 +273,50 @@ async def apply_template(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# ==================== CONVERSATIONAL CHAT ====================
+
 @app.post("/chat")
 async def chat(
     request: ConversationRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Conversational animation generation with auth and credits"""
     try:
-        check_rate_limit(current_user)
+        # Check rate limits
+        check_rate_limit(current_user, db)
         
-        if not auth_service.check_credits(current_user):
+        # Get DB user
+        db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+        
+        # Check credits
+        if db_user.credits_remaining <= 0:
             raise HTTPException(
                 status_code=402,
                 detail="No credits remaining. Please upgrade your plan!"
             )
         
+        # Generate response
         assistant_text, updated_animation = gemini_service.generate_conversational_response(
             user_message=request.message,
             conversation_history=request.conversation_history,
             current_animation=request.current_animation
         )
         
+        # Validate against tier limits
         validate_animation_limits(updated_animation, current_user)
         
-        auth_service.deduct_credit(current_user)
+        # Deduct credit
+        db_user.credits_remaining -= 1
+        db_user.credits_used += 1
+        db_user.animations_created += 1
+        db.commit()
         
+        # Generate code and description
         manim_code = manim_service.generate_full_code(updated_animation)
         description = _generate_description(updated_animation)
         
+        # Create messages
         user_msg = ChatMessage(
             role="user",
             content=request.message,
@@ -246,9 +340,15 @@ async def chat(
             "manim_code": manim_code,
             "description": description,
             "validation": {"valid": True, "errors": []},
-            "conversation_history": [msg.model_dump() for msg in updated_history],
+            "conversation_history": [
+                {
+                    **msg.model_dump(exclude={"timestamp"}),
+                    "timestamp": msg.timestamp.isoformat()
+                }
+                for msg in updated_history
+            ],
             "credits_used": 1,
-            "credits_remaining": current_user.credits_remaining
+            "credits_remaining": db_user.credits_remaining
         })
         
     except HTTPException:
@@ -263,22 +363,37 @@ async def chat(
                 "manim_code": None,
                 "description": None,
                 "validation": {"valid": False, "errors": [str(e)]},
-                "conversation_history": [msg.model_dump() for msg in request.conversation_history],
+                "conversation_history": [
+                    {
+                        **msg.model_dump(exclude={"timestamp"}),
+                        "timestamp": msg.timestamp.isoformat()
+                    }
+                    for msg in request.conversation_history
+                ],
                 "credits_used": 0,
                 "credits_remaining": current_user.credits_remaining
             }
         )
 
 
+# ==================== JOB QUEUE RENDERING ====================
 
 @app.post("/render/queue")
 async def queue_render_job(
     animation_ir: AnimationIR,
     output_format: str = "mp4",
     quality: str = "medium",
-    current_user: User = Depends(get_current_user)
+    include_voiceover: bool = False,
+    voiceover_text: Optional[str] = None,
+    voiceover_voice: str = "alloy",
+    include_music: bool = False,
+    music_mood: str = "corporate",
+    music_volume: float = 0.2,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Queue a render job (non-blocking)"""
+    # Validate output format and quality based on tier
     limits = TIER_LIMITS[current_user.tier]
     
     if output_format == "gif" and not limits.can_export_gif:
@@ -288,11 +403,18 @@ async def queue_render_job(
     if quality == "4k" and limits.max_render_quality != "4k":
         raise HTTPException(status_code=403, detail="4K rendering requires Enterprise plan")
     
+    # Create job
     job = job_queue_service.create_render_job(
         user_id=current_user.id,
         animation_ir=animation_ir,
         output_format=output_format,
-        quality=quality
+        quality=quality,
+        include_voiceover=include_voiceover,
+        voiceover_text=voiceover_text,
+        voiceover_voice=voiceover_voice,
+        include_music=include_music,
+        music_mood=music_mood,
+        music_volume=music_volume
     )
     
     return {
@@ -340,11 +462,11 @@ async def list_user_jobs(current_user: User = Depends(get_current_user)):
     ]
 
 
-
 @app.post("/render/instant")
 async def instant_render(
     animation_ir: AnimationIR,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Render animation instantly (blocking, for small animations)"""
     try:
@@ -371,35 +493,429 @@ async def instant_render(
         raise HTTPException(status_code=500, detail=f"Render failed: {str(e)}")
 
 
+# ==================== STRIPE BILLING ====================
+
+@app.post("/billing/create-checkout-session")
+async def create_checkout_session(
+    plan: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create Stripe checkout session for subscription"""
+    try:
+        db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+        
+        session = stripe_service.create_checkout_session(
+            user=db_user,
+            plan=plan,
+            success_url=f"{settings.FRONTEND_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.FRONTEND_URL}/billing/canceled"
+        )
+        
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/billing/create-marketplace-checkout")
+async def create_marketplace_checkout(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create Stripe checkout for marketplace item"""
+    try:
+        item = marketplace_service.get_listing(db, item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Item not found")
+        
+        db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+        
+        session = stripe_service.create_marketplace_checkout(
+            user=db_user,
+            item_price=item.price,
+            item_title=item.title,
+            item_id=item_id,
+            success_url=f"{settings.FRONTEND_URL}/marketplace/purchase-success?item_id={item_id}",
+            cancel_url=f"{settings.FRONTEND_URL}/marketplace/{item_id}"
+        )
+        
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/billing/cancel-subscription")
+async def cancel_subscription(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Cancel subscription at period end"""
+    try:
+        db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+        
+        if not db_user.stripe_subscription_id:
+            raise HTTPException(status_code=400, detail="No active subscription")
+        
+        success = stripe_service.cancel_subscription(db_user.stripe_subscription_id)
+        
+        return {"success": success, "message": "Subscription will cancel at period end"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/billing/resume-subscription")
+async def resume_subscription(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Resume a canceled subscription"""
+    try:
+        db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+        
+        if not db_user.stripe_subscription_id:
+            raise HTTPException(status_code=400, detail="No subscription found")
+        
+        success = stripe_service.resume_subscription(db_user.stripe_subscription_id)
+        
+        return {"success": success, "message": "Subscription resumed"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/billing/subscription")
+async def get_subscription(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current subscription details"""
+    db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+    
+    if not db_user.stripe_subscription_id:
+        return {"has_subscription": False}
+    
+    subscription = stripe_service.get_subscription(db_user.stripe_subscription_id)
+    
+    return {
+        "has_subscription": True,
+        "subscription": subscription,
+        "tier": db_user.tier
+    }
+
+
+@app.post("/billing/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """Handle Stripe webhooks"""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    
+    try:
+        event = stripe_service.construct_webhook_event(payload, sig_header)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Handle different event types
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        
+        if session.get("metadata", {}).get("type") == "marketplace_purchase":
+            user_id = session["metadata"]["user_id"]
+            item_id = session["metadata"]["item_id"]
+            payment_intent = session.get("payment_intent")
+            
+            marketplace_service.purchase_item(db, user_id, item_id, payment_intent)
+    
+    elif event["type"] == "customer.subscription.created":
+        subscription = event["data"]["object"]
+        data = stripe_service.handle_subscription_created(subscription)
+        
+        user = db.query(DBUser).filter(DBUser.id == data["user_id"]).first()
+        if user:
+            user.stripe_subscription_id = data["subscription_id"]
+            user.subscription_status = data["status"]
+            user.tier = UserTierEnum.PRO
+            db.commit()
+    
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        data = stripe_service.handle_subscription_deleted(subscription)
+        
+        user = db.query(DBUser).filter(DBUser.id == data["user_id"]).first()
+        if user:
+            user.tier = UserTierEnum.FREE
+            user.subscription_status = "canceled"
+            db.commit()
+    
+    return {"status": "success"}
+
+
+# ==================== MARKETPLACE ====================
+
+@app.post("/marketplace/list")
+async def create_marketplace_listing(
+    project_id: str,
+    title: str,
+    description: str,
+    category: str,
+    price: float,
+    tags: list[str] = [],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List an animation project in the marketplace"""
+    try:
+        item = marketplace_service.create_listing(
+            db=db,
+            project_id=project_id,
+            creator_id=current_user.id,
+            title=title,
+            description=description,
+            category=category,
+            price=price,
+            tags=tags
+        )
+        
+        return {
+            "success": True,
+            "item_id": item.id,
+            "status": item.status,
+            "message": "Listing created and pending approval"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/marketplace")
+async def browse_marketplace(
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    featured: bool = False,
+    limit: int = 20,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
+    """Browse marketplace listings"""
+    items = marketplace_service.get_listings(
+        db=db,
+        category=category,
+        search=search,
+        min_price=min_price,
+        max_price=max_price,
+        featured_only=featured,
+        limit=limit,
+        offset=offset
+    )
+    
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "description": item.description,
+            "category": item.category,
+            "price": item.price,
+            "tags": item.tags,
+            "sales_count": item.sales_count,
+            "rating": item.rating_sum / item.rating_count if item.rating_count > 0 else 0,
+            "featured": item.featured,
+            "creator": {"username": item.creator.username}
+        }
+        for item in items
+    ]
+
+
+@app.get("/marketplace/{item_id}")
+async def get_marketplace_item(item_id: str, db: Session = Depends(get_db)):
+    """Get detailed marketplace item"""
+    item = marketplace_service.get_listing(db, item_id)
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return {
+        "id": item.id,
+        "title": item.title,
+        "description": item.description,
+        "category": item.category,
+        "price": item.price,
+        "tags": item.tags,
+        "sales_count": item.sales_count,
+        "revenue": item.revenue,
+        "rating": item.rating_sum / item.rating_count if item.rating_count > 0 else 0,
+        "featured": item.featured,
+        "animation_ir": item.project.animation_ir,
+        "creator": {"id": item.creator.id, "username": item.creator.username},
+        "created_at": item.created_at
+    }
+
+
+@app.get("/marketplace/trending")
+async def get_trending_items(db: Session = Depends(get_db)):
+    """Get trending marketplace items"""
+    items = marketplace_service.get_trending(db, limit=10)
+    
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "price": item.price,
+            "sales_count": item.sales_count,
+            "creator": {"username": item.creator.username}
+        }
+        for item in items
+    ]
+
+
+@app.get("/marketplace/featured")
+async def get_featured_items(db: Session = Depends(get_db)):
+    """Get featured marketplace items"""
+    items = marketplace_service.get_featured(db, limit=5)
+    
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "description": item.description,
+            "price": item.price,
+            "thumbnail": item.project.thumbnail_url
+        }
+        for item in items
+    ]
+
+
+@app.get("/marketplace/my-purchases")
+async def get_my_purchases(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get user's marketplace purchases"""
+    purchases = marketplace_service.get_user_purchases(db, current_user.id)
+    
+    return [
+        {
+            "id": purchase.id,
+            "item": {
+                "id": purchase.item.id,
+                "title": purchase.item.title,
+                "animation_ir": purchase.item.project.animation_ir
+            },
+            "price_paid": purchase.price_paid,
+            "purchased_at": purchase.purchased_at
+        }
+        for purchase in purchases
+    ]
+
+
+@app.get("/marketplace/my-sales")
+async def get_my_sales(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get creator's sales statistics"""
+    items = marketplace_service.get_creator_sales(db, current_user.id)
+    total_revenue = marketplace_service.get_creator_revenue(db, current_user.id)
+    
+    return {
+        "total_revenue": total_revenue,
+        "items": [
+            {
+                "id": item.id,
+                "title": item.title,
+                "price": item.price,
+                "sales_count": item.sales_count,
+                "revenue": item.revenue
+            }
+            for item in items
+        ]
+    }
+
+
+# ==================== ANALYTICS ====================
 
 @app.get("/analytics/stats")
-async def get_user_stats(current_user: User = Depends(get_current_user)):
+async def get_user_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get user analytics and usage stats"""
+    db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
+    
     return {
-        "tier": current_user.tier,
-        "credits_remaining": current_user.credits_remaining,
-        "credits_used": current_user.credits_used,
-        "animations_created": current_user.animations_created,
-        "member_since": current_user.created_at,
-        "last_login": current_user.last_login
+        "tier": db_user.tier,
+        "credits_remaining": db_user.credits_remaining,
+        "credits_used": db_user.credits_used,
+        "animations_created": db_user.animations_created,
+        "member_since": db_user.created_at,
+        "last_login": db_user.last_login
     }
 
 
+# ==================== LEGACY/PUBLIC ENDPOINTS ====================
 
-@app.get("/")
-async def root():
-    return {
-        "message": "Animation Studio API (Enterprise)",
-        "version": "3.0.0",
-        "features": ["auth", "templates", "job_queue", "multi_format"]
-    }
+@app.post("/generate-plan")
+async def generate_animation_plan(
+    request: GenerateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Legacy endpoint: Generate plan without conversation"""
+    try:
+        animation_ir = gemini_service.generate_animation_json(request.prompt)
+        manim_code = manim_service.generate_full_code(animation_ir)
+        description = _generate_description(animation_ir)
+        
+        return JSONResponse(content={
+            "success": True,
+            "json_ir": animation_ir.model_dump(),
+            "manim_code": manim_code,
+            "description": description,
+            "validation": {"valid": True, "errors": []}
+        })
+        
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "json_ir": None,
+                "manim_code": None,
+                "description": None,
+                "validation": {"valid": False, "errors": [str(e)]}
+            }
+        )
 
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
+@app.post("/generate")
+async def generate_animation(
+    request: GenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Legacy endpoint: Generate and render in one step"""
+    try:
+        animation_ir = gemini_service.generate_animation_json(request.prompt)
+        video_files = manim_service.render_scenes(animation_ir)
+        
+        final_video_id = str(uuid.uuid4())
+        final_video_path = os.path.join(
+            settings.TEMP_DIR,
+            f"final_{final_video_id}.mp4"
+        )
+        
+        video_service.merge_videos(video_files, final_video_path)
+        
+        return FileResponse(
+            final_video_path,
+            media_type="video/mp4",
+            filename=f"animation_{final_video_id}.mp4",
+            background=lambda: video_service.cleanup_file(final_video_path)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
+# ==================== HELPERS ====================
 
 def _generate_description(animation_ir: AnimationIR) -> str:
     """Generate human-readable description"""
