@@ -23,7 +23,7 @@ class MarketplaceService:
         tags: List[str] = None
     ) -> DBMarketplaceItem:
         """Create a new marketplace listing"""
-        # Check if project exists and belongs to user
+
         project = db.query(DBAnimationProject).filter(
             DBAnimationProject.id == project_id,
             DBAnimationProject.user_id == creator_id
@@ -32,7 +32,7 @@ class MarketplaceService:
         if not project:
             raise ValueError("Project not found or unauthorized")
         
-        # Check if already listed
+
         existing = db.query(DBMarketplaceItem).filter(
             DBMarketplaceItem.project_id == project_id
         ).first()
@@ -40,7 +40,7 @@ class MarketplaceService:
         if existing:
             raise ValueError("Project already listed in marketplace")
         
-        # Create listing
+
         item = DBMarketplaceItem(
             id=str(uuid.uuid4()),
             project_id=project_id,
@@ -94,7 +94,7 @@ class MarketplaceService:
         if featured_only:
             query = query.filter(DBMarketplaceItem.featured == True)
         
-        # Order by featured first, then by sales
+
         query = query.order_by(
             desc(DBMarketplaceItem.featured),
             desc(DBMarketplaceItem.sales_count)
@@ -120,7 +120,7 @@ class MarketplaceService:
         if not item:
             raise ValueError("Item not found")
         
-        # Check if already purchased
+
         existing = db.query(DBPurchase).filter(
             DBPurchase.buyer_id == buyer_id,
             DBPurchase.item_id == item_id
@@ -129,7 +129,7 @@ class MarketplaceService:
         if existing:
             raise ValueError("Already purchased")
         
-        # Create purchase record
+
         purchase = DBPurchase(
             id=str(uuid.uuid4()),
             buyer_id=buyer_id,
@@ -138,7 +138,7 @@ class MarketplaceService:
             stripe_payment_intent=payment_intent_id
         )
         
-        # Update item stats
+
         item.sales_count += 1
         item.revenue += item.price
         
@@ -195,7 +195,7 @@ class MarketplaceService:
         if not item:
             raise ValueError("Item not found or unauthorized")
         
-        # Update allowed fields
+
         allowed_fields = ["title", "description", "price", "tags"]
         for field, value in updates.items():
             if field in allowed_fields and value is not None:
@@ -221,7 +221,7 @@ class MarketplaceService:
         if not item:
             raise ValueError("Item not found or unauthorized")
         
-        # Can't delete if there are purchases
+
         if item.sales_count > 0:
             raise ValueError("Cannot delete item with existing purchases")
         
@@ -232,8 +232,7 @@ class MarketplaceService:
     
     def get_trending(self, db: Session, limit: int = 10) -> List[DBMarketplaceItem]:
         """Get trending items (most sales in last 30 days)"""
-        # For simplicity, just return top sellers
-        # In production, filter by date
+
         return db.query(DBMarketplaceItem).filter(
             DBMarketplaceItem.status == MarketplaceStatusEnum.APPROVED
         ).order_by(

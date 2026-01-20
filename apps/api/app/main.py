@@ -9,7 +9,7 @@ import uuid
 from typing import Optional
 
 from .models import (
-    GenerateRequest, AnimationIR, ConversationRequest, ConversationResponse,
+    GenerateRequest, AnimationIR, ConversationRequest, ConversationResponse,RenderQueueRequest,
     UserCreate, UserLogin, Token, User, UserTier, TIER_LIMITS, RenderJob,
     ChatMessage
 )
@@ -34,19 +34,20 @@ app = FastAPI(
     version="4.0.0"
 )
 
-# Initialize database
+
 init_db()
 
-# CORS
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"]  
 )
 
-# Services
+
 gemini_service = GeminiService()
 manim_service = ManimService()
 video_service = VideoService()
@@ -56,11 +57,11 @@ job_queue_service = JobQueueService()
 stripe_service = StripeService()
 marketplace_service = MarketplaceService()
 
-# Rate limiting (simple in-memory, use Redis in production)
+
 RATE_LIMIT_STORE = {}
 
 
-# ==================== DEPENDENCIES ====================
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -76,7 +77,7 @@ async def get_current_user(
             detail="Invalid authentication credentials"
         )
     
-    # Get user from database
+
     db_user = db.query(DBUser).filter(DBUser.id == user_data["user_id"]).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -165,7 +166,7 @@ def validate_animation_limits(animation_ir: AnimationIR, user: User) -> None:
         )
 
 
-# ==================== ROOT ====================
+
 
 @app.get("/")
 async def root():
@@ -181,7 +182,7 @@ async def health():
     return {"status": "healthy"}
 
 
-# ==================== AUTH ENDPOINTS ====================
+
 
 @app.post("/auth/register", response_model=Token)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -215,7 +216,7 @@ async def get_limits(current_user: User = Depends(get_current_user)):
     return TIER_LIMITS[current_user.tier]
 
 
-# ==================== TEMPLATE ENDPOINTS ====================
+
 
 @app.get("/templates")
 async def list_templates(user: Optional[User] = Depends(get_optional_user)):
@@ -273,7 +274,7 @@ async def apply_template(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-# ==================== CONVERSATIONAL CHAT ====================
+
 
 @app.post("/chat")
 async def chat(
@@ -283,40 +284,40 @@ async def chat(
 ):
     """Conversational animation generation with auth and credits"""
     try:
-        # Check rate limits
+
         check_rate_limit(current_user, db)
         
-        # Get DB user
+
         db_user = db.query(DBUser).filter(DBUser.id == current_user.id).first()
         
-        # Check credits
+
         if db_user.credits_remaining <= 0:
             raise HTTPException(
                 status_code=402,
                 detail="No credits remaining. Please upgrade your plan!"
             )
         
-        # Generate response
+
         assistant_text, updated_animation = gemini_service.generate_conversational_response(
             user_message=request.message,
             conversation_history=request.conversation_history,
             current_animation=request.current_animation
         )
         
-        # Validate against tier limits
+
         validate_animation_limits(updated_animation, current_user)
         
-        # Deduct credit
+
         db_user.credits_remaining -= 1
         db_user.credits_used += 1
         db_user.animations_created += 1
         db.commit()
         
-        # Generate code and description
+
         manim_code = manim_service.generate_full_code(updated_animation)
         description = _generate_description(updated_animation)
         
-        # Create messages
+
         user_msg = ChatMessage(
             role="user",
             content=request.message,
@@ -347,7 +348,7 @@ async def chat(
                 }
                 for msg in updated_history
             ],
-            "credits_used": 1,
+                        "credits_used": 1,
             "credits_remaining": db_user.credits_remaining
         })
         
@@ -376,45 +377,38 @@ async def chat(
         )
 
 
-# ==================== JOB QUEUE RENDERING ====================
+
 
 @app.post("/render/queue")
 async def queue_render_job(
-    animation_ir: AnimationIR,
-    output_format: str = "mp4",
-    quality: str = "medium",
-    include_voiceover: bool = False,
-    voiceover_text: Optional[str] = None,
-    voiceover_voice: str = "alloy",
-    include_music: bool = False,
-    music_mood: str = "corporate",
-    music_volume: float = 0.2,
+    request: RenderQueueRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Queue a render job (non-blocking)"""
-    # Validate output format and quality based on tier
+
     limits = TIER_LIMITS[current_user.tier]
     
-    if output_format == "gif" and not limits.can_export_gif:
+    if request.output_format == "gif" and not limits.can_export_gif:
         raise HTTPException(status_code=403, detail="GIF export requires Pro plan")
-    if output_format == "webm" and not limits.can_export_webm:
+    if request.output_format == "webm" and not limits.can_export_webm:
         raise HTTPException(status_code=403, detail="WebM export requires Pro plan")
-    if quality == "4k" and limits.max_render_quality != "4k":
+    if request.quality == "4k" and limits.max_render_quality != "4k":
         raise HTTPException(status_code=403, detail="4K rendering requires Enterprise plan")
     
-    # Create job
+
     job = job_queue_service.create_render_job(
         user_id=current_user.id,
-        animation_ir=animation_ir,
-        output_format=output_format,
-        quality=quality,
-        include_voiceover=include_voiceover,
-        voiceover_text=voiceover_text,
-        voiceover_voice=voiceover_voice,
-        include_music=include_music,
-        music_mood=music_mood,
-        music_volume=music_volume
+        animation_ir=request.animation_ir,
+        output_format=request.output_format,
+        quality=request.quality,
+        project_id=request.project_id,
+        include_voiceover=request.include_voiceover,
+        voiceover_text=request.voiceover_text,
+        voiceover_voice=request.voiceover_voice,
+        include_music=request.include_music,
+        music_mood=request.music_mood,
+        music_volume=request.music_volume
     )
     
     return {
@@ -436,15 +430,44 @@ async def get_render_status(
     if not job or job.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Job not found")
     
+
+    video_url = None
+    if job.video_url and job.status == "completed":
+        video_url = f"/render/download/{job_id}"
+    
     return {
         "job_id": job.id,
         "status": job.status,
-        "video_url": job.video_url,
+        "video_url": video_url,
         "error_message": job.error_message,
         "created_at": job.created_at,
         "completed_at": job.completed_at,
         "estimated_duration": job.estimated_duration
     }
+
+
+@app.get("/render/download/{job_id}")
+async def download_render(
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Download rendered video"""
+    job = job_queue_service.get_job_status(job_id)
+    
+    if not job or job.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if job.status != "completed" or not job.video_url:
+        raise HTTPException(status_code=400, detail="Video not ready")
+    
+    if not os.path.exists(job.video_url):
+        raise HTTPException(status_code=404, detail="Video file not found")
+    
+    return FileResponse(
+        job.video_url,
+        media_type="video/mp4",
+        filename=f"animation_{job_id}.mp4"
+    )
 
 
 @app.get("/render/jobs")
@@ -493,7 +516,7 @@ async def instant_render(
         raise HTTPException(status_code=500, detail=f"Render failed: {str(e)}")
 
 
-# ==================== STRIPE BILLING ====================
+
 
 @app.post("/billing/create-checkout-session")
 async def create_checkout_session(
@@ -614,7 +637,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # Handle different event types
+
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         
@@ -649,7 +672,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     return {"status": "success"}
 
 
-# ==================== MARKETPLACE ====================
+
 
 @app.post("/marketplace/list")
 async def create_marketplace_listing(
@@ -831,7 +854,7 @@ async def get_my_sales(
     }
 
 
-# ==================== ANALYTICS ====================
+
 
 @app.get("/analytics/stats")
 async def get_user_stats(
@@ -851,7 +874,7 @@ async def get_user_stats(
     }
 
 
-# ==================== LEGACY/PUBLIC ENDPOINTS ====================
+
 
 @app.post("/generate-plan")
 async def generate_animation_plan(
@@ -915,7 +938,7 @@ async def generate_animation(
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
-# ==================== HELPERS ====================
+
 
 def _generate_description(animation_ir: AnimationIR) -> str:
     """Generate human-readable description"""

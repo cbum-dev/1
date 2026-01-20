@@ -43,8 +43,45 @@ export default function AnimationStudio() {
   const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
 
   // Render state
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [renderJob, setRenderJob] = useState<RenderJob | null>(null);
   const [polling, setPolling] = useState(false);
+
+  // Fetch and convert video to blob URL when job completes
+  useEffect(() => {
+    const fetchVideo = async () => {
+      if (!renderJob?.video_url || renderJob.status !== 'completed') return;
+      
+      const token = getToken();
+      if (!token) return;
+      
+      try {
+        const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${renderJob.video_url}`;
+        const response = await fetch(downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url);
+        }
+      } catch (error) {
+        console.error('Failed to fetch video:', error);
+      }
+    };
+    
+    fetchVideo();
+    
+    // Cleanup blob URL on unmount
+    return () => {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
+  }, [renderJob?.video_url, renderJob?.status]);
 
   // Template state
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -233,7 +270,31 @@ export default function AnimationStudio() {
 
   const handleDownload = () => {
     if (!renderJob?.video_url) return;
-    window.open(renderJob.video_url, '_blank');
+    
+    const token = getToken();
+    if (!token) return;
+    
+    // Create a download link with authorization
+    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${renderJob.video_url}`;
+    
+    // Open in new tab (browser will handle download with auth header via fetch)
+    fetch(downloadUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `animation-${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      })
+      .catch(error => console.error('Download failed:', error));
   };
 
   const handleReset = () => {
@@ -571,10 +632,10 @@ export default function AnimationStudio() {
                       <CardTitle>Rendered Video</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {renderJob?.status === 'completed' && renderJob.video_url ? (
+                      {renderJob?.status === 'completed' && videoUrl ? (
                         <>
                           <video
-                            src={renderJob.video_url}
+                            src={videoUrl}
                             controls
                             className="w-full rounded-lg shadow-lg"
                             autoPlay
@@ -594,6 +655,11 @@ export default function AnimationStudio() {
                           <p className="mt-4 text-gray-600">
                             {renderJob?.status === 'processing' ? 'Rendering your animation...' : 'Queued...'}
                           </p>
+                          {renderJob?.estimated_duration && (
+                            <p className="text-sm text-gray-500 mt-2">
+                              Estimated time: ~{Math.ceil(renderJob.estimated_duration)}s
+                            </p>
+                          )}
                         </div>
                       )}
                     </CardContent>

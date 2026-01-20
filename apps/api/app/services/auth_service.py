@@ -16,7 +16,7 @@ class AuthService:
     def __init__(self):
         self.secret_key = settings.JWT_SECRET_KEY
         self.algorithm = "HS256"
-        self.access_token_expire_minutes = 60 * 24 * 7  # 7 days
+        self.access_token_expire_minutes = 60 * 24 * 7  
     
     def hash_password(self, password: str) -> str:
         """Hash a password"""
@@ -48,12 +48,12 @@ class AuthService:
     
     def register_user(self, user_data: UserCreate, db: Session) -> Token:
         """Register a new user"""
-        # Check if user exists
+
         existing = db.query(DBUser).filter(DBUser.email == user_data.email).first()
         if existing:
             raise ValueError("User already exists")
         
-        # Create user
+
         db_user = DBUser(
             id=str(uuid.uuid4()),
             email=user_data.email,
@@ -67,7 +67,7 @@ class AuthService:
         db.commit()
         db.refresh(db_user)
         
-        # Generate token
+
         access_token = self.create_access_token(db_user.id, db_user.email)
         
         user = User(
@@ -85,21 +85,21 @@ class AuthService:
     
     def login_user(self, email: str, password: str, db: Session) -> Token:
         """Login user and return token"""
-        # Find user
+
         db_user = db.query(DBUser).filter(DBUser.email == email).first()
         
         if not db_user:
             raise ValueError("Invalid credentials")
         
-        # Verify password
+
         if not self.verify_password(password, db_user.hashed_password):
             raise ValueError("Invalid credentials")
         
-        # Update last login
+
         db_user.last_login = datetime.utcnow()
         db.commit()
         
-        # Generate token
+
         access_token = self.create_access_token(db_user.id, db_user.email)
         
         user = User(

@@ -9,7 +9,6 @@ from ..config import get_settings
 
 settings = get_settings()
 
-# In-memory job queue (replace with Redis/Celery in production)
 JOB_QUEUE: dict[str, RenderJob] = {}
 
 
@@ -30,15 +29,14 @@ class JobQueueService:
         project_id: Optional[str] = None,
         include_voiceover: bool = False,
         voiceover_text: Optional[str] = None,
-        voiceover_voice: Optional[str] = None,
+        voiceover_voice: str = "alloy",
         include_music: bool = False,
-        music_mood: Optional[str] = None,
-        music_volume: Optional[float] = None
+        music_mood: str = "corporate",
+        music_volume: float = 0.2
     ) -> RenderJob:
         """Create a new render job"""
-        # Estimate duration
         total_duration = sum(scene.duration for scene in animation_ir.scenes)
-        estimated_render_time = total_duration * 2  # Rough estimate
+        estimated_render_time = total_duration * 2 
         
         job = RenderJob(
             user_id=user_id,
@@ -52,12 +50,12 @@ class JobQueueService:
             voiceover_voice=voiceover_voice,
             include_music=include_music,
             music_mood=music_mood,
-            music_volume=music_volume if music_volume is not None else 0.2
+            music_volume=music_volume
         )
         
         JOB_QUEUE[job.id] = job
         
-        # Start processing asynchronously
+
         asyncio.create_task(self._process_job(job.id))
         
         return job
@@ -68,7 +66,6 @@ class JobQueueService:
         if not job:
             return
         
-        # Wait if too many concurrent jobs
         while self.current_jobs >= self.max_concurrent_jobs:
             await asyncio.sleep(1)
         
@@ -77,10 +74,10 @@ class JobQueueService:
             job.status = RenderJobStatus.PROCESSING
             job.started_at = datetime.utcnow()
             
-            # Render the animation
+
             video_files = self.manim_service.render_scenes(job.animation_ir)
             
-            # Merge videos
+
             import os
             output_path = os.path.join(
                 settings.TEMP_DIR,
@@ -89,11 +86,11 @@ class JobQueueService:
             
             final_video = self.video_service.merge_videos(video_files, output_path)
             
-            # Add audio if requested
+
             if job.include_voiceover or job.include_music:
                 voiceover_text = job.voiceover_text
                 
-                # Auto-generate voiceover if requested but no text provided
+
                 if job.include_voiceover and not voiceover_text:
                     from ..models import AnimationIR
                     desc = self._generate_animation_description(job.animation_ir)
@@ -111,7 +108,7 @@ class JobQueueService:
                     music_volume=job.music_volume
                 )
             
-            # Convert format if needed
+
             if job.output_format == "gif":
                 final_video = self._convert_to_gif(final_video)
             elif job.output_format == "webm":
@@ -165,7 +162,7 @@ class JobQueueService:
         
         gif_path = mp4_path.replace('.mp4', '.gif')
         
-        # FFmpeg command for high-quality GIF
+
         cmd = [
             'ffmpeg',
             '-i', mp4_path,
@@ -177,7 +174,7 @@ class JobQueueService:
         
         subprocess.run(cmd, check=True, capture_output=True)
         
-        # Cleanup MP4
+
         if os.path.exists(mp4_path):
             os.remove(mp4_path)
         
@@ -202,7 +199,7 @@ class JobQueueService:
         
         subprocess.run(cmd, check=True, capture_output=True)
         
-        # Cleanup MP4
+
         if os.path.exists(mp4_path):
             os.remove(mp4_path)
         

@@ -11,21 +11,21 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 # Pricing (in cents)
 PRICING = {
     "pro_monthly": {
-        "amount": 1999,  # $19.99
+        "amount": 1999, 
         "currency": "usd",
         "interval": "month",
         "tier": UserTierEnum.PRO,
         "credits": 100
     },
     "pro_yearly": {
-        "amount": 19999,  # $199.99 (save ~17%)
+        "amount": 19999, 
         "currency": "usd",
         "interval": "year",
         "tier": UserTierEnum.PRO,
         "credits": 100
     },
     "enterprise_monthly": {
-        "amount": 9999,  # $99.99
+        "amount": 9999, 
         "currency": "usd",
         "interval": "month",
         "tier": UserTierEnum.ENTERPRISE,
@@ -67,7 +67,7 @@ class StripeService:
         
         pricing = PRICING[plan]
         
-        # Ensure user has a Stripe customer ID
+
         if not user.stripe_customer_id:
             user.stripe_customer_id = self.create_customer(user)
         
@@ -115,7 +115,7 @@ class StripeService:
         cancel_url: str
     ) -> Dict:
         """Create a one-time payment for marketplace item"""
-        # Ensure user has a Stripe customer ID
+
         if not user.stripe_customer_id:
             user.stripe_customer_id = self.create_customer(user)
         
@@ -130,7 +130,7 @@ class StripeService:
                             "name": item_title,
                             "description": "Animation Template"
                         },
-                        "unit_amount": int(item_price * 100)  # Convert to cents
+                        "unit_amount": int(item_price * 100)  
                     },
                     "quantity": 1
                 }],

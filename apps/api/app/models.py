@@ -5,7 +5,7 @@ from enum import Enum
 import uuid
 
 
-# ==================== ANIMATION MODELS ====================
+
 
 class Animation(BaseModel):
     type: Literal["write", "create", "fade_in", "fade_out", "move_to", "scale", "rotate"]
@@ -47,14 +47,14 @@ class Scene(BaseModel):
     scene_id: str
     duration: float = Field(gt=0, le=10)
     background_color: str = "#1a1a2e"
-    objects: List[AnimationObject] = Field(max_length=10)  # Increased for premium users
+    objects: List[AnimationObject] = Field(max_length=10)  
 
 
 class AnimationIR(BaseModel):
     version: str = "1.0"
     metadata: dict
     scenes: List[Scene]
-    style: Optional[str] = "default"  # default, minimal, vibrant, dark, retro
+    style: Optional[str] = "default"  
 
     @field_validator('scenes')
     @classmethod
@@ -65,8 +65,6 @@ class AnimationIR(BaseModel):
             raise ValueError("Too many scenes (max 20)")
         return v
 
-
-# ==================== USER & AUTH MODELS ====================
 
 class UserTier(str, Enum):
     FREE = "free"
@@ -79,7 +77,7 @@ class User(BaseModel):
     email: EmailStr
     username: str
     tier: UserTier = UserTier.FREE
-    credits_remaining: int = 10  # Free tier gets 10 generations
+    credits_remaining: int = 10
     credits_used: int = 0
     animations_created: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -102,8 +100,6 @@ class Token(BaseModel):
     token_type: str = "bearer"
     user: User
 
-
-# ==================== ANIMATION PROJECT MODELS ====================
 
 class AnimationProject(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -129,8 +125,6 @@ class AnimationVersion(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ==================== TEMPLATE MODELS ====================
-
 class AnimationTemplate(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -143,7 +137,7 @@ class AnimationTemplate(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-# ==================== JOB QUEUE MODELS ====================
+
 
 class RenderJobStatus(str, Enum):
     PENDING = "pending"
@@ -160,14 +154,14 @@ class RenderJob(BaseModel):
     status: RenderJobStatus = RenderJobStatus.PENDING
     output_format: Literal["mp4", "gif", "webm"] = "mp4"
     quality: Literal["low", "medium", "high", "4k"] = "medium"
-    # Audio options
+
     include_voiceover: bool = False
     voiceover_text: Optional[str] = None
     voiceover_voice: Optional[Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"]] = "alloy"
     include_music: bool = False
     music_mood: Optional[Literal["upbeat", "calm", "dramatic", "corporate"]] = "corporate"
     music_volume: float = 0.2
-    # Output
+
     video_url: Optional[str] = None
     error_message: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -176,7 +170,18 @@ class RenderJob(BaseModel):
     estimated_duration: Optional[float] = None
 
 
-# ==================== CHAT MODELS ====================
+class RenderQueueRequest(BaseModel):
+    animation_ir: AnimationIR
+    output_format: Literal["mp4", "gif", "webm"] = "mp4"
+    quality: Literal["low", "medium", "high", "4k"] = "medium"
+    project_id: Optional[str] = None
+    include_voiceover: bool = False
+    voiceover_text: Optional[str] = None
+    voiceover_voice: Optional[str] = "alloy"
+    include_music: bool = False
+    music_mood: Optional[str] = "corporate"
+    music_volume: Optional[float] = Field(default=0.2, ge=0.0, le=1.0)
+
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
@@ -189,7 +194,7 @@ class ConversationRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     conversation_history: List[ChatMessage] = Field(default=[])
     current_animation: Optional[AnimationIR] = None
-    style_preference: Optional[str] = None  # Apply style to generation
+    style_preference: Optional[str] = None  
 
 
 class ConversationResponse(BaseModel):
@@ -204,14 +209,12 @@ class ConversationResponse(BaseModel):
     credits_remaining: Optional[int] = None
 
 
-# ==================== QUOTA & LIMITS ====================
-
 class QuotaLimits(BaseModel):
     tier: UserTier
     max_generations_per_day: int
     max_scenes_per_animation: int
     max_objects_per_scene: int
-    max_animation_duration: float  # seconds
+    max_animation_duration: float 
     max_render_quality: str
     can_export_gif: bool
     can_export_webm: bool
@@ -267,7 +270,7 @@ TIER_LIMITS = {
 }
 
 
-# ==================== ANALYTICS MODELS ====================
+
 
 class UsageStats(BaseModel):
     user_id: str
@@ -278,7 +281,7 @@ class UsageStats(BaseModel):
     api_calls: int = 0
 
 
-# ==================== LEGACY MODELS ====================
+
 
 class GenerateRequest(BaseModel):
     prompt: str = Field(min_length=10, max_length=2000)
