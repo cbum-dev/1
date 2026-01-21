@@ -576,7 +576,13 @@ export default function AnimationStudio() {
                       )}
 
                       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
-                        ℹ️ Audio features are in beta. TTS uses placeholder audio currently.
+                        ℹ️ <strong>Audio features are in beta:</strong>
+                        <ul className="mt-2 ml-4 list-disc text-xs">
+                          <li>TTS (text-to-speech) uses placeholder audio currently</li>
+                          <li>Background music requires stock music files to be configured</li>
+                          <li>Video will render without audio if these features aren't set up</li>
+                          <li>Audio processing is optional and won't fail the render</li>
+                        </ul>
                       </div>
                     </CardContent>
                   </Card>

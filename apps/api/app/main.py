@@ -402,13 +402,7 @@ async def queue_render_job(
         animation_ir=request.animation_ir,
         output_format=request.output_format,
         quality=request.quality,
-        project_id=request.project_id,
-        include_voiceover=request.include_voiceover,
-        voiceover_text=request.voiceover_text,
-        voiceover_voice=request.voiceover_voice,
-        include_music=request.include_music,
-        music_mood=request.music_mood,
-        music_volume=request.music_volume
+        project_id=request.project_id
     )
     
     return {

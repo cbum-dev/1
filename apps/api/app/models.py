@@ -155,13 +155,6 @@ class RenderJob(BaseModel):
     output_format: Literal["mp4", "gif", "webm"] = "mp4"
     quality: Literal["low", "medium", "high", "4k"] = "medium"
 
-    include_voiceover: bool = False
-    voiceover_text: Optional[str] = None
-    voiceover_voice: Optional[Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"]] = "alloy"
-    include_music: bool = False
-    music_mood: Optional[Literal["upbeat", "calm", "dramatic", "corporate"]] = "corporate"
-    music_volume: float = 0.2
-
     video_url: Optional[str] = None
     error_message: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -175,12 +168,6 @@ class RenderQueueRequest(BaseModel):
     output_format: Literal["mp4", "gif", "webm"] = "mp4"
     quality: Literal["low", "medium", "high", "4k"] = "medium"
     project_id: Optional[str] = None
-    include_voiceover: bool = False
-    voiceover_text: Optional[str] = None
-    voiceover_voice: Optional[str] = "alloy"
-    include_music: bool = False
-    music_mood: Optional[str] = "corporate"
-    music_volume: Optional[float] = Field(default=0.2, ge=0.0, le=1.0)
 
 
 class ChatMessage(BaseModel):
