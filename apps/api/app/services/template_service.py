@@ -10,8 +10,10 @@ class TemplateService:
     
     def _initialize_templates(self):
         """Initialize built-in templates"""
-        
-        TEMPLATES["logo_reveal"] = AnimationTemplate(
+        TEMPLATES.clear()
+
+        logo_reveal = AnimationTemplate(
+            id="logo_reveal",
             name="Logo Reveal",
             description="Simple logo reveal animation with fade and scale",
             category="logo",
@@ -42,13 +44,15 @@ class TemplateService:
                                     Animation(type="scale", start_time=0.0, duration=1.5, scale_factor=1.5)
                                 ]
                             )
+
                         ]
                     )
                 ]
             )
         )
-        
-        TEMPLATES["title_card"] = AnimationTemplate(
+
+        title_card = AnimationTemplate(
+            id="title_card",
             name="Title Card",
             description="Professional title card with subtitle",
             category="presentation",
@@ -93,8 +97,9 @@ class TemplateService:
                 ]
             )
         )
-        
-        TEMPLATES["loading"] = AnimationTemplate(
+
+        loading = AnimationTemplate(
+            id="loading",
             name="Loading Animation",
             description="Circular loading indicator",
             category="social",
@@ -130,8 +135,9 @@ class TemplateService:
                 ]
             )
         )
-        
-        TEMPLATES["three_steps"] = AnimationTemplate(
+
+        three_steps = AnimationTemplate(
+            id="three_steps",
             name="Three Steps",
             description="Animated three-step process visualization",
             category="explainer",
@@ -236,6 +242,9 @@ class TemplateService:
                 ]
             )
         )
+
+        for template in (logo_reveal, title_card, loading, three_steps):
+            TEMPLATES[template.id] = template
     
     def get_all_templates(self, include_premium: bool = False) -> List[AnimationTemplate]:
         """Get all available templates"""
