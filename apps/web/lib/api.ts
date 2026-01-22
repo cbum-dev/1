@@ -1,5 +1,16 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+async function parseJsonSafe<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 // ==================== TYPES ====================
 
 export interface User {
@@ -43,6 +54,43 @@ export interface RenderJob {
   created_at: string;
   completed_at?: string;
   estimated_duration?: number;
+}
+
+export interface SavedProject {
+  id: string;
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedConversation {
+  id: string;
+  title: string;
+  last_message?: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+}
+
+export interface SaveProjectResult {
+  id: string;
+  title?: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  title?: string;
+  description?: string;
+  animation_ir: any;
+  manim_code?: string;
+  messages: ChatMessage[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 // ==================== AUTH ====================
@@ -241,6 +289,125 @@ export async function instantRender(animationIR: any, token: string): Promise<Bl
   }
 
   return response.blob();
+}
+
+// ==================== PROJECTS & CONVERSATIONS ====================
+
+export async function saveProject(
+  title: string,
+  description: string,
+  animationIR: any,
+  messages: ChatMessage[],
+  token: string
+): Promise<SaveProjectResult> {
+  const response = await fetch(`${API_BASE_URL}/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      title,
+      description,
+      animation_ir: animationIR,
+      messages,
+    }),
+  });
+
+  const data = await parseJsonSafe<unknown>(response);
+
+  if (!response.ok) {
+    const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to save project';
+    throw new Error(errorDetail);
+  }
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Invalid project response');
+  }
+
+  return data as SaveProjectResult;
+}
+
+export async function getUserProjects(token: string): Promise<SavedProject[]> {
+  const response = await fetch(`${API_BASE_URL}/projects`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await parseJsonSafe<unknown>(response);
+
+  if (!response.ok) {
+    const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to load projects';
+    throw new Error(errorDetail);
+  }
+
+  if (!data) {
+    return [];
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data as SavedProject[];
+}
+
+export async function getUserConversations(token: string): Promise<SavedConversation[]> {
+  const response = await fetch(`${API_BASE_URL}/conversations`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await parseJsonSafe<unknown>(response);
+
+  if (!response.ok) {
+    const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to load conversations';
+    throw new Error(errorDetail);
+  }
+
+  if (!data) {
+    return [];
+  }
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data as SavedConversation[];
+}
+
+export async function loadConversation(conversationId: string, token: string): Promise<ConversationDetail> {
+  const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await parseJsonSafe<unknown>(response);
+
+  if (!response.ok) {
+    const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to load conversation';
+    throw new Error(errorDetail);
+  }
+
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Invalid conversation response');
+  }
+
+  const detail = data as ConversationDetail;
+  detail.messages = detail.messages || [];
+  return detail;
+}
+
+export async function deleteConversation(conversationId: string, token: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const data = await parseJsonSafe<unknown>(response);
+  const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to delete conversation';
+  throw new Error(errorDetail);
 }
 
 // ==================== ANALYTICS ====================

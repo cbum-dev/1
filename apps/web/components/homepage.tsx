@@ -9,8 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black">
-      {/* Background */}
+    <main className="relative min-h-screen overflow-hidden bg-black text-white">
       <div className="absolute z-10 inset-0">
         <Dither
           waveSpeed={0.05}
@@ -25,33 +24,9 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Overlay (IMPORTANT) — but must NOT block mouse */}
+
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
 
-      {/* Navbar */}
-      <header className="relative z-10 flex justify-center pt-6">
-        <nav className="flex w-[min(920px,92vw)] items-center justify-between rounded-full border border-white/10 bg-white/10 px-6 py-3 backdrop-blur-xl shadow-lg">
-          <div className="flex items-center gap-2 text-white">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-semibold">ManimFlow</span>
-          </div>
-
-          <div className="flex items-center gap-6 text-sm text-white/80">
-            <Link href="/" className="hover:text-white transition cursor-pointer">
-              Home
-            </Link>
-            <Link href="/docs" className="hover:text-white transition cursor-pointer">
-              Docs
-            </Link>
-
-            <Button size="sm" className="rounded-full cursor-pointer">
-              Get Started <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </nav>
-      </header>
-
-      {/* Hero */}
       <section className="relative z-20 flex min-h-[calc(100vh-90px)] items-center justify-center px-6">
         <div className="max-w-3xl text-center">
           <Badge
