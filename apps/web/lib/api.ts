@@ -221,12 +221,7 @@ export async function queueRenderJob(
   options: {
     output_format?: string;
     quality?: string;
-    include_voiceover?: boolean;
-    voiceover_text?: string;
-    voiceover_voice?: string;
-    include_music?: boolean;
-    music_mood?: string;
-    music_volume?: number;
+    project_id?: string;
   },
   token: string
 ): Promise<RenderJob> {

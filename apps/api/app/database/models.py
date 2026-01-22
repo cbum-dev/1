@@ -43,6 +43,7 @@ class DBUser(Base):
     projects = relationship("DBAnimationProject", back_populates="owner")
     marketplace_items = relationship("DBMarketplaceItem", back_populates="creator")
     purchases = relationship("DBPurchase", back_populates="buyer")
+    conversations = relationship("DBConversation", back_populates="owner")
 
 
 class DBAnimationProject(Base):
@@ -63,6 +64,28 @@ class DBAnimationProject(Base):
     # Relationships
     owner = relationship("DBUser", back_populates="projects")
     marketplace_item = relationship("DBMarketplaceItem", back_populates="project", uselist=False)
+    conversation = relationship("DBConversation", back_populates="project", uselist=False, cascade="all, delete-orphan")
+
+
+class DBConversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    project_id = Column(String, ForeignKey("animation_projects.id"), nullable=False, unique=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    animation_ir = Column(JSON, nullable=False)
+    manim_code = Column(Text, nullable=True)
+    messages = Column(JSON, nullable=False, default=list)
+    message_count = Column(Integer, default=0)
+    last_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    owner = relationship("DBUser", back_populates="conversations")
+    project = relationship("DBAnimationProject", back_populates="conversation")
 
 
 class DBMarketplaceItem(Base):

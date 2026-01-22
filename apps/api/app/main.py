@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Header, Request, status
+from fastapi import FastAPI, HTTPException, Depends, Header, Request, Response, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -6,12 +6,27 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import os
 import uuid
-from typing import Optional
+from typing import Optional, List
 
 from .models import (
-    GenerateRequest, AnimationIR, ConversationRequest, ConversationResponse,RenderQueueRequest,
-    UserCreate, UserLogin, Token, User, UserTier, TIER_LIMITS, RenderJob,
-    ChatMessage
+    GenerateRequest,
+    AnimationIR,
+    ConversationRequest,
+    ConversationResponse,
+    RenderQueueRequest,
+    UserCreate,
+    UserLogin,
+    Token,
+    User,
+    UserTier,
+    TIER_LIMITS,
+    RenderJob,
+    ChatMessage,
+    SaveProjectRequest,
+    SaveProjectResponse,
+    ProjectSummary,
+    ConversationSummary,
+    ConversationDetail,
 )
 from .services.gemini_service import GeminiService
 from .services.manim_service import ManimService
@@ -22,7 +37,13 @@ from .services.job_queue_service import JobQueueService
 from .services.stripe_service import StripeService
 from .services.marketplace_service import MarketplaceService
 from .database.database import get_db, init_db
-from .database.models import DBUser, DBMarketplaceItem, UserTierEnum
+from .database.models import (
+    DBUser,
+    DBAnimationProject,
+    DBConversation,
+    DBMarketplaceItem,
+    UserTierEnum,
+)
 from .config import get_settings
 
 settings = get_settings()
@@ -166,6 +187,44 @@ def validate_animation_limits(animation_ir: AnimationIR, user: User) -> None:
         )
 
 
+def _project_to_summary(project: DBAnimationProject) -> ProjectSummary:
+    return ProjectSummary(
+        id=project.id,
+        title=project.title,
+        description=project.description,
+        thumbnail_url=project.thumbnail_url,
+        created_at=project.created_at,
+        updated_at=project.updated_at or project.created_at,
+    )
+
+
+def _conversation_to_summary(conversation: DBConversation) -> ConversationSummary:
+    message_count = conversation.message_count or (
+        len(conversation.messages) if conversation.messages else 0
+    )
+    return ConversationSummary(
+        id=conversation.id,
+        title=conversation.title,
+        last_message=conversation.last_message,
+        message_count=message_count,
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at or conversation.created_at,
+    )
+
+
+def _conversation_to_detail(conversation: DBConversation) -> ConversationDetail:
+    return ConversationDetail(
+        id=conversation.id,
+        title=conversation.title,
+        description=conversation.description,
+        animation_ir=conversation.animation_ir,
+        manim_code=conversation.manim_code,
+        messages=conversation.messages or [],
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at or conversation.created_at,
+    )
+
+
 
 
 @app.get("/")
@@ -173,7 +232,7 @@ async def root():
     return {
         "message": "Animation Studio API (Complete)",
         "version": "4.0.0",
-        "features": ["auth", "templates", "stripe", "marketplace", "audio", "chat"]
+        "features": ["auth", "templates", "stripe", "marketplace", "chat"]
     }
 
 
@@ -377,6 +436,133 @@ async def chat(
         )
 
 
+
+
+@app.post("/projects", response_model=SaveProjectResponse)
+async def save_project(
+    request: SaveProjectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    now = datetime.utcnow()
+
+    project = DBAnimationProject(
+        id=str(uuid.uuid4()),
+        user_id=current_user.id,
+        title=request.title,
+        description=request.description,
+        animation_ir=request.animation_ir,
+        thumbnail_url=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+    conversation = DBConversation(
+        id=str(uuid.uuid4()),
+        user_id=current_user.id,
+        project_id=project.id,
+        title=request.title,
+        description=request.description,
+        animation_ir=request.animation_ir,
+        manim_code=request.manim_code,
+        messages=request.messages,
+        message_count=len(request.messages),
+        last_message=(request.messages[-1].get("content") if request.messages else None),
+        created_at=now,
+        updated_at=now,
+    )
+
+    db.add(project)
+    db.add(conversation)
+    db.commit()
+    db.refresh(project)
+    db.refresh(conversation)
+
+    return SaveProjectResponse(
+        id=conversation.id,
+        title=project.title,
+        description=project.description,
+        created_at=project.created_at,
+        updated_at=project.updated_at,
+    )
+
+
+@app.get("/projects", response_model=List[ProjectSummary])
+async def get_user_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    projects = (
+        db.query(DBAnimationProject)
+        .filter(DBAnimationProject.user_id == current_user.id)
+        .order_by(DBAnimationProject.created_at.desc())
+        .all()
+    )
+    return [_project_to_summary(project) for project in projects]
+
+
+@app.get("/conversations", response_model=List[ConversationSummary])
+async def get_user_conversations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    conversations = (
+        db.query(DBConversation)
+        .filter(DBConversation.user_id == current_user.id)
+        .order_by(DBConversation.updated_at.desc())
+        .all()
+    )
+    return [_conversation_to_summary(conversation) for conversation in conversations]
+
+
+@app.get("/conversations/{conversation_id}", response_model=ConversationDetail)
+async def load_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    conversation = (
+        db.query(DBConversation)
+        .filter(
+            DBConversation.id == conversation_id,
+            DBConversation.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return _conversation_to_detail(conversation)
+
+
+@app.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    conversation = (
+        db.query(DBConversation)
+        .filter(
+            DBConversation.id == conversation_id,
+            DBConversation.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    project = conversation.project
+
+    db.delete(conversation)
+    if project and project.user_id == current_user.id:
+        db.delete(project)
+
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.post("/render/queue")

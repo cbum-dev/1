@@ -93,13 +93,6 @@ class JobQueueService:
         finally:
             self.current_jobs -= 1
     
-    def _generate_animation_description(self, animation_ir) -> str:
-        """Generate description for voiceover generation"""
-        parts = [f"This is {animation_ir.metadata.get('title', 'an animation')}."]
-        for i, scene in enumerate(animation_ir.scenes, 1):
-            parts.append(f"Scene {i} shows {len(scene.objects)} elements.")
-        return " ".join(parts)
-    
     def get_job_status(self, job_id: str) -> Optional[RenderJob]:
         """Get the status of a render job"""
         return JOB_QUEUE.get(job_id)

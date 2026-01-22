@@ -15,7 +15,7 @@ import {
 
 import {
   Loader2, Send, Sparkles, Copy, CheckCircle, Play, RotateCcw,
-  Download, LogOut, User as UserIcon, Crown, Zap, Music, Mic,
+  Download, LogOut, User as UserIcon, Crown, Zap,
   Save, History, Trash2, FolderOpen, MessageSquare
 } from 'lucide-react';
 
@@ -77,12 +77,6 @@ export default function AnimationStudio() {
   // Template state
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-
-  // Audio state
-  const [includeVoiceover, setIncludeVoiceover] = useState(false);
-  const [voiceoverText, setVoiceoverText] = useState('');
-  const [includeMusic, setIncludeMusic] = useState(false);
-  const [musicMood, setMusicMood] = useState<string>('corporate');
 
   // UI state
   const [activeTab, setActiveTab] = useState('chat');
@@ -356,10 +350,6 @@ export default function AnimationStudio() {
         {
           output_format: 'mp4',
           quality: 'medium',
-          include_voiceover: includeVoiceover,
-          voiceover_text: voiceoverText || undefined,
-          include_music: includeMusic,
-          music_mood: musicMood,
         },
         token
       );
@@ -713,7 +703,6 @@ export default function AnimationStudio() {
                 <TabsList className="mb-4">
                   <TabsTrigger value="chat">Chat</TabsTrigger>
                   <TabsTrigger value="preview">Preview</TabsTrigger>
-                  <TabsTrigger value="audio">Audio Options</TabsTrigger>
                   <TabsTrigger value="json">JSON IR</TabsTrigger>
                   <TabsTrigger value="code">Code</TabsTrigger>
                   <TabsTrigger value="video" disabled={!renderJob}>Video</TabsTrigger>
@@ -742,75 +731,6 @@ export default function AnimationStudio() {
                       <pre className="bg-blue-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
                         {currentAnimation.description}
                       </pre>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="audio">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Audio Options</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="voiceover"
-                          checked={includeVoiceover}
-                          onChange={(e) => setIncludeVoiceover(e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor="voiceover" className="flex items-center gap-2 text-sm font-medium">
-                          <Mic className="w-4 h-4" />
-                          Add AI Voiceover
-                        </label>
-                      </div>
-
-                      {includeVoiceover && (
-                        <Textarea
-                          placeholder="Enter custom voiceover script (or leave empty for auto-generated)"
-                          value={voiceoverText}
-                          onChange={(e) => setVoiceoverText(e.target.value)}
-                          rows={4}
-                        />
-                      )}
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="music"
-                          checked={includeMusic}
-                          onChange={(e) => setIncludeMusic(e.target.checked)}
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor="music" className="flex items-center gap-2 text-sm font-medium">
-                          <Music className="w-4 h-4" />
-                          Add Background Music
-                        </label>
-                      </div>
-
-                      {includeMusic && (
-                        <select
-                          value={musicMood}
-                          onChange={(e) => setMusicMood(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        >
-                          <option value="upbeat">Upbeat</option>
-                          <option value="calm">Calm</option>
-                          <option value="dramatic">Dramatic</option>
-                          <option value="corporate">Corporate</option>
-                        </select>
-                      )}
-
-                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
-                        ℹ️ <strong>Audio features are in beta:</strong>
-                        <ul className="mt-2 ml-4 list-disc text-xs">
-                          <li>TTS (text-to-speech) uses placeholder audio currently</li>
-                          <li>Background music requires stock music files to be configured</li>
-                          <li>Video will render without audio if these features aren't set up</li>
-                          <li>Audio processing is optional and won't fail the render</li>
-                        </ul>
-                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>

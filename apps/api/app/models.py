@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator, EmailStr
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
 import uuid
@@ -196,6 +196,51 @@ class ConversationResponse(BaseModel):
     credits_remaining: Optional[int] = None
 
 
+class SaveProjectRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: Optional[str] = None
+    animation_ir: Dict[str, Any]
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+    manim_code: Optional[str] = None
+
+
+class SaveProjectResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectSummary(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationSummary(BaseModel):
+    id: str
+    title: str
+    last_message: Optional[str] = None
+    message_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationDetail(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    animation_ir: Dict[str, Any]
+    manim_code: Optional[str] = None
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+
 class QuotaLimits(BaseModel):
     tier: UserTier
     max_generations_per_day: int
@@ -278,3 +323,4 @@ class GenerateResponse(BaseModel):
     success: bool
     message: str
     video_url: Optional[str] = None
+    
