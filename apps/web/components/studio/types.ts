@@ -25,37 +25,19 @@ export interface StudioUser {
 
 export interface StudioSidebarProps {
   user: StudioUser | null;
+  limits?: Record<string, unknown> | null;
   onRequireAuth: () => void;
   onLogout: () => void;
-  showHistory: boolean;
-  onToggleHistory: () => void;
+  sidebarView: 'templates' | 'history';
+  onSidebarViewChange: (view: 'templates' | 'history') => void;
   loadingHistory: boolean;
   savedConversations: SavedConversation[];
   savedProjects: SavedProject[];
-  limits?: Record<string, unknown> | null;
   currentConversationId: string | null;
   onLoadConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
   templates: Template[];
   onApplyTemplate: (template: Template) => void;
-  messages: ChatMessage[];
-  messagesEndRef: RefObject<HTMLDivElement>;
-  messageDraft: string;
-  onMessageDraftChange: (value: string) => void;
-  onSendMessage: () => void;
-  sendingMessage: boolean;
-  currentAnimation: AnimationState | null;
-  onSaveConversation: () => void;
-  savingConversation: boolean;
-}
-
-export interface StudioToolbarProps {
-  currentAnimation: AnimationState | null;
-  conversationSaved: boolean;
-  onReset: () => void;
-  onRender: () => void;
-  canRender: boolean;
-  rendering: boolean;
 }
 
 export interface StudioWorkspaceProps {
@@ -69,5 +51,26 @@ export interface StudioWorkspaceProps {
   onCopyCode: () => void;
   copiedJson: boolean;
   copiedCode: boolean;
+}
+
+export interface StudioHeaderProps {
+  currentAnimation: AnimationState | null;
+  conversationSaved: boolean;
+  onReset: () => void;
+  onRender: () => void;
+  canRender: boolean;
+  rendering: boolean;
+}
+
+export interface StudioChatProps {
+  user: StudioUser | null;
   messages: ChatMessage[];
+  messagesEndRef: RefObject<HTMLDivElement>;
+  messageDraft: string;
+  onMessageDraftChange: (value: string) => void;
+  onSendMessage: () => void;
+  sendingMessage: boolean;
+  currentAnimation: AnimationState | null;
+  onSaveConversation: () => void;
+  savingConversation: boolean;
 }

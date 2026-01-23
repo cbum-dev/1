@@ -53,7 +53,7 @@ function EmptyState({ onAction }: { onAction: () => void }) {
 
 const Sidebar = memo(function Sidebar({
   user,
-  userLimits,
+  limits,
   onRequireAuth,
   onLogout,
   sidebarView,
@@ -100,9 +100,9 @@ const Sidebar = memo(function Sidebar({
                 </div>
               </div>
 
-              {userLimits && (
+              {limits && (
                 <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-white/60">
-                  {Object.entries(userLimits).map(([key, value]) => (
+                  {Object.entries(limits).map(([key, value]) => (
                     <div key={key} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                       <p className="uppercase tracking-[0.16em] text-[10px] text-white/40">{key}</p>
                       <p className="mt-1 text-sm font-medium text-white/80">{String(value)}</p>
