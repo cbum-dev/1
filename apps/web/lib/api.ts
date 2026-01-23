@@ -323,6 +323,39 @@ export async function saveProject(
   return data as SaveProjectResult;
 }
 
+export async function updateProject(
+  id: string,
+  title: string,
+  description: string,
+  animationIR: any,
+  messages: ChatMessage[],
+  token: string
+): Promise<SaveProjectResult> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      title,
+      description,
+      animation_ir: animationIR,
+      messages,
+      manim_code: '', // Optional
+    }),
+  });
+
+  const data = await parseJsonSafe<unknown>(response);
+
+  if (!response.ok) {
+    const errorDetail = (data as { detail?: string } | null)?.detail ?? 'Failed to update project';
+    throw new Error(errorDetail);
+  }
+
+  return data as SaveProjectResult;
+}
+
 export async function getUserProjects(token: string): Promise<SavedProject[]> {
   const response = await fetch(`${API_BASE_URL}/projects`, {
     headers: { Authorization: `Bearer ${token}` },

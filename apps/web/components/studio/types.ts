@@ -27,8 +27,8 @@ export interface StudioSidebarProps {
   user: StudioUser | null;
   onRequireAuth: () => void;
   onLogout: () => void;
-  sidebarView: 'templates' | 'history';
-  onSidebarViewChange: (view: 'templates' | 'history') => void;
+  sidebarView: 'templates' | 'history' | 'chat';
+  onSidebarViewChange: (view: 'templates' | 'history' | 'chat') => void;
   loadingHistory: boolean;
   savedConversations: SavedConversation[];
   savedProjects: SavedProject[];
@@ -39,6 +39,7 @@ export interface StudioSidebarProps {
   hasActiveConversation: boolean;
   onNewConversation: () => void;
   onViewAccess: () => void;
+  chatProps: StudioChatProps;
   className?: string;
 }
 
@@ -70,7 +71,7 @@ export interface StudioHeaderProps {
 export interface StudioChatProps {
   user: StudioUser | null;
   messages: ChatMessage[];
-  messagesEndRef: RefObject<HTMLDivElement>;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
   messageDraft: string;
   onMessageDraftChange: (value: string) => void;
   onSendMessage: () => void;

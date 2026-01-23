@@ -487,6 +487,78 @@ async def save_project(
     )
 
 
+@app.put("/projects/{project_id}", response_model=SaveProjectResponse)
+async def update_project(
+    project_id: str,
+    request: SaveProjectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update an existing project and its conversation"""
+    # First find the conversation since the UI tracks conversation ID primarily
+    # But wait, the ID passed from UI (currentConversationId) IS the conversation ID usually
+    # Let's check save_project return value: it returns conversation.id as 'id'.
+    # So the ID passed here is likely the conversation ID if we are just calling it with currentConversationId.
+    
+    # Actually, the UI calls saveProject which hits POST /projects.
+    # If the user is passing currentConversationId to the new updateProject function, 
+    # we should probably assume we are updating the CONVERSATION, which maps to a Project.
+    
+    # However, standard REST would be PUT /projects/{project_id}. 
+    # But the UI doesn't explicitly track project_id separate from conversation_id in the main flow (it just has currentConversationId).
+    
+    # So, let's look up the conversation first by the passed ID.
+    conversation = db.query(DBConversation).filter(
+        DBConversation.id == project_id, # ambiguous naming in URL, but logic holds
+        DBConversation.user_id == current_user.id
+    ).first()
+
+    project = None
+    if conversation:
+        project = conversation.project
+    else:
+        # Fallback: maybe it IS a project ID?
+        project = db.query(DBAnimationProject).filter(
+            DBAnimationProject.id == project_id,
+            DBAnimationProject.user_id == current_user.id
+        ).first()
+
+    if not project:
+         raise HTTPException(status_code=404, detail="Project/Conversation not found")
+
+    now = datetime.utcnow()
+    
+    # Update Project
+    project.title = request.title
+    project.description = request.description
+    project.animation_ir = request.animation_ir
+    project.updated_at = now
+    
+    # Update Conversation
+    if conversation:
+        conversation.title = request.title
+        conversation.description = request.description
+        conversation.animation_ir = request.animation_ir
+        conversation.manim_code = request.manim_code
+        conversation.messages = request.messages
+        conversation.message_count = len(request.messages)
+        conversation.last_message = (request.messages[-1].get("content") if request.messages else None)
+        conversation.updated_at = now
+    
+    db.commit()
+    db.refresh(project)
+    if conversation:
+        db.refresh(conversation)
+    
+    return SaveProjectResponse(
+        id=conversation.id if conversation else project.id,
+        title=project.title,
+        description=project.description,
+        created_at=project.created_at,
+        updated_at=project.updated_at,
+    )
+
+
 @app.get("/projects", response_model=List[ProjectSummary])
 async def get_user_projects(
     current_user: User = Depends(get_current_user),

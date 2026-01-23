@@ -4,7 +4,9 @@ import { memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, Save } from "lucide-react";
+import { Loader2, Send, Save, Sparkles, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { StudioChatProps } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -27,12 +29,12 @@ const ChatPanel = memo(function ChatPanel({
   return (
     <section
       className={cn(
-        "flex w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-[0_0_30px_rgba(8,8,12,0.45)]",
+        "flex min-h-0 w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl",
         className
       )}
     >
-      <div className="flex-1 overflow-hidden">
-        <div className="relative h-full overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+        <div className="flex flex-col gap-4">
           <AnimatePresence initial={false}>
             {messages.length === 0 ? (
               <motion.div
@@ -40,12 +42,15 @@ const ChatPanel = memo(function ChatPanel({
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -16 }}
-                className="flex h-full flex-col items-center justify-center gap-3 text-center text-white/60"
+                className="flex h-full min-h-[200px] flex-col items-center justify-center gap-4 text-center text-white/60"
               >
-                <p className="text-sm uppercase tracking-[0.3em] text-white/30">No messages yet</p>
-                <p className="text-lg font-medium text-white/70">
-                  {user ? 'Describe your animation to begin.' : 'Sign in to start crafting motion.'}
-                </p>
+                <div className="rounded-full bg-white/5 p-4 ring-1 ring-white/10">
+                  <Sparkles className="h-6 w-6 text-indigo-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Start a new creation</p>
+                  <p className="text-xs text-white/50">Describe the movement you want to see.</p>
+                </div>
               </motion.div>
             ) : (
               messages.map((msg, index) => {
@@ -56,17 +61,24 @@ const ChatPanel = memo(function ChatPanel({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18, delay: index * 0.03 }}
-                    className={`mb-4 flex ${isUser ? "justify-end" : "justify-start"}`}
+                    className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
                   >
+                    <div className={`mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border ${isUser ? "border-white/10 bg-white/10" : "border-indigo-500/20 bg-indigo-500/10"}`}>
+                      {isUser ? <User className="h-4 w-4 text-white/70" /> : <Sparkles className="h-4 w-4 text-indigo-300" />}
+                    </div>
+
                     <div
-                      className={`max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-6 shadow-lg backdrop-blur ${
-                        isUser
-                          ? "bg-gradient-to-br from-white to-white/80 text-black"
-                          : "bg-white/8 text-white"
-                      }`}
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser
+                          ? "bg-white text-black"
+                          : "bg-white/5 text-white ring-1 ring-white/10"
+                        }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      <span className="mt-2 block text-xs uppercase tracking-[0.2em] text-white/40">
+                      <div className="prose prose-invert prose-sm max-w-none leading-relaxed prose-p:my-1 prose-pre:bg-black/50 prose-pre:p-2 prose-pre:rounded-lg">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
+                      <span className={`mt-1 block text-[10px] opacity-40 ${isUser ? "text-black" : "text-white"}`}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -79,33 +91,24 @@ const ChatPanel = memo(function ChatPanel({
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-black/40 p-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-xs uppercase tracking-[0.3em] text-white/30">Chat composer</div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!canSave || savingConversation}
-            onClick={onSaveConversation}
-            className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-          >
-            {savingConversation ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Session
-              </>
-            )}
-          </Button>
-        </div>
-        <div className="flex flex-col gap-3 md:flex-row">
+      <div className="border-t border-white/5 bg-black/20 p-3">
+        {canSave && !savingConversation && (
+          <div className="mb-2 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSaveConversation}
+              className="h-6 px-2 text-[10px] uppercase tracking-wider text-white/30 hover:bg-white/5 hover:text-white"
+            >
+              <Save className="mr-1 h-3 w-3" />
+              Save Session
+            </Button>
+          </div>
+        )}
+        <div className="relative flex items-end gap-2 rounded-2xl border border-white/10 bg-white/5 p-1 pr-2 ring-1 ring-transparent focus-within:ring-white/10 focus-within:bg-black/40 transition-all">
           <Textarea
-            rows={3}
-            placeholder={user ? "Describe the motion or ask for changes..." : "Sign in to create animations"}
+            rows={1}
+            placeholder={user ? "Describe the motion..." : "Sign in to chat"}
             value={messageDraft}
             onChange={(event) => onMessageDraftChange(event.target.value)}
             onKeyDown={(event) => {
@@ -115,18 +118,19 @@ const ChatPanel = memo(function ChatPanel({
               }
             }}
             disabled={sendingMessage || !user}
-            className="flex-1 resize-none border-white/15 bg-black/40 text-white placeholder:text-white/30"
+            className="min-h-[44px] flex-1 resize-none border-0 bg-transparent py-3 text-white placeholder:text-white/30 focus-visible:ring-0"
+            style={{ maxHeight: '120px' }}
           />
           <Button
-            size="lg"
+            size="icon"
             onClick={onSendMessage}
             disabled={!canSend}
-            className="md:h-auto md:min-h-[3.25rem] md:min-w-[3.25rem] md:self-end"
+            className="mb-1 h-8 w-8 rounded-xl bg-white text-black hover:bg-white/90 disabled:bg-white/10 disabled:text-white/20"
           >
             {sendingMessage ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             )}
           </Button>
         </div>

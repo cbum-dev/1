@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 import AuthDialog from './auth-dialog';
 import StudioShell from './studio/studio-shell';
 import Sidebar from './studio/sidebar';
@@ -30,9 +31,10 @@ import {
   SavedConversation,
   SavedProject,
   ChatMessage,
+  updateProject,
 } from '@/lib/api';
 import { AnimationState, StudioUser } from './studio/types';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -64,28 +66,29 @@ function EmptyWorkspace({
   onRequireAuth: () => void;
 }) {
   return (
-    <div className="flex h-full min-h-[340px] flex-col items-center justify-center gap-5 rounded-3xl border border-dashed border-white/15 bg-white/[0.04] px-10 py-12 text-center text-white/70">
-      <div className="flex size-16 items-center justify-center rounded-full border border-white/15 bg-white/10">
-        <Sparkles className="h-8 w-8 text-white/70" />
+    <div className="flex h-full min-h-[340px] flex-col items-center justify-center gap-5 rounded-3xl border border-dashed border-white/10 bg-white/[0.02] px-10 py-12 text-center text-white/70">
+      <div className="flex size-16 items-center justify-center rounded-full border border-white/10 bg-white/5 shadow-2xl shadow-indigo-500/10">
+        <Sparkles className="h-8 w-8 text-indigo-300" />
       </div>
       <div className="space-y-2">
-        <p className="text-sm uppercase tracking-[0.3em] text-white/30">Workspace idle</p>
-        <h2 className="text-2xl font-semibold text-white">Craft your first motion sequence</h2>
-        <p className="text-sm text-white/60">
-          Start chatting with the assistant or jump into a curated template to generate your first scene.
+        <p className="text-xs uppercase tracking-[0.3em] text-white/30">Workspace idle</p>
+        <h2 className="text-2xl font-semibold text-white">Ready when you are</h2>
+        <p className="text-sm text-white/50 max-w-sm">
+          Send a message to start animating from scratch, or pick a template to get a head start.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
         <Button
           variant="outline"
-          className="border-white/25 bg-white/10 text-white hover:bg-white/20"
+          className="h-10 border-white/10 bg-white/5 text-white hover:bg-white/10 hover:border-white/20 px-6"
           onClick={onExploreTemplates}
         >
           Browse templates
         </Button>
         {!isAuthenticated && (
-          <Button className="bg-white text-black hover:bg-white/90" onClick={onRequireAuth}>
-            Sign in to create
+          <Button className="h-10 bg-white text-black hover:bg-white/90 px-6" onClick={onRequireAuth}>
+            Sign in to save work
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         )}
       </div>
@@ -111,13 +114,56 @@ export default function AnimationStudio() {
   const [copiedJson, setCopiedJson] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [sidebarView, setSidebarView] = useState<'templates' | 'history'>('templates');
+  const [sidebarView, setSidebarView] = useState<'templates' | 'history' | 'chat'>('templates');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [savingConversation, setSavingConversation] = useState(false);
   const [polling, setPolling] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Autosave logic
+  const debouncedSave = useDebouncedCallback(async () => {
+    if (!user || !currentAnimation || messages.length === 0) return;
+
+    // Don't auto-save if we don't have a conversation ID yet (first save should be explicit or handled differently)
+    // Wait, let's actually make it auto-save even for new ones if we want seamlessness, 
+    // but usually "Save as new" is better for the first time. 
+    // For now, let's autosave ONLY if we already have an ID (checking `currentConversationId`).
+    // For now, let's autosave ONLY if we already have an ID (checking `currentConversationId`).
+    if (!currentConversationId) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    setSavingConversation(true);
+    try {
+      const title = messages[0]?.content.slice(0, 50) || 'Untitled Animation';
+      await updateProject(
+        currentConversationId,
+        title,
+        currentAnimation.description || '',
+        currentAnimation.json_ir,
+        messages,
+        token
+      );
+      // Refresh history silently
+      const [conversations] = await Promise.all([getUserConversations(token)]);
+      setSavedConversations(conversations);
+    } catch (err) {
+      console.error("Autosave failed", err);
+    } finally {
+      setSavingConversation(false);
+    }
+  }, 5000);
+
+  // Trigger autosave when relevant state changes
+  useEffect(() => {
+    if (currentConversationId) {
+      debouncedSave();
+    }
+  }, [messages, currentAnimation, currentConversationId, debouncedSave]);
+
 
   const clearVideoUrl = useCallback(() => {
     setVideoUrl((prev) => {
@@ -353,18 +399,34 @@ export default function AnimationStudio() {
     setSavingConversation(true);
     try {
       const title = messages[0]?.content.slice(0, 50) || 'Untitled Animation';
-      const result = await saveProject(
-        title,
-        currentAnimation.description,
-        currentAnimation.json_ir,
-        messages,
-        token
-      );
+
+      let result;
+      if (currentConversationId) {
+        result = await updateProject(
+          currentConversationId,
+          title,
+          currentAnimation.description || '',
+          currentAnimation.json_ir,
+          messages,
+          token
+        );
+      } else {
+        result = await saveProject(
+          title,
+          currentAnimation.description || '',
+          currentAnimation.json_ir,
+          messages,
+          token
+        );
+      }
 
       setCurrentConversationId(result.id);
       await loadUserHistory(token);
       setSidebarView('history');
-      window.alert('Conversation saved successfully!');
+      if (!currentConversationId) {
+        // Only show alert for manual first save
+        window.alert('Conversation saved successfully!');
+      }
     } catch (error) {
       console.error('Save error:', error);
       window.alert('Failed to save conversation');
@@ -568,6 +630,8 @@ export default function AnimationStudio() {
   const canRender = Boolean(currentAnimation && currentAnimation.validation.valid && !polling);
   const conversationSaved = Boolean(currentConversationId);
   const hasActiveConversation = messages.length > 0 || Boolean(currentAnimation);
+  // Video panel is only visible when we have a video URL or a render job is in progress/completed
+  const showVideoPanel = Boolean(videoUrl || (renderJob && renderJob.status === 'completed'));
 
   return (
     <StudioShell className="h-screen" ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
@@ -581,7 +645,7 @@ export default function AnimationStudio() {
         onLogout={handleLogout}
       />
 
-      <div className="flex h-full flex-col gap-6 overflow-hidden lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-10">
+      <div className="flex h-full flex-col gap-4 overflow-hidden p-2 lg:grid lg:grid-cols-[24rem_minmax(0,1fr)] lg:gap-4 lg:p-4">
         <Sidebar
           user={user}
           onRequireAuth={handleRequireAuth}
@@ -598,10 +662,22 @@ export default function AnimationStudio() {
           hasActiveConversation={hasActiveConversation}
           onNewConversation={handleReset}
           onViewAccess={handleViewAccess}
+          chatProps={{
+            user,
+            messages,
+            messagesEndRef,
+            messageDraft,
+            onMessageDraftChange: setMessageDraft,
+            onSendMessage: handleSendMessage,
+            sendingMessage,
+            currentAnimation,
+            onSaveConversation: handleSaveConversation,
+            savingConversation,
+          }}
           className="lg:h-full"
         />
 
-        <div className="flex h-full flex-col gap-6 overflow-hidden">
+        <div className="flex h-full flex-col gap-4 overflow-hidden">
           <Header
             currentAnimation={currentAnimation}
             conversationSaved={conversationSaved}
@@ -614,44 +690,71 @@ export default function AnimationStudio() {
             onViewAccess={handleViewAccess}
           />
 
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="grid flex-1 grid-rows-[1fr_auto] gap-6 overflow-hidden">
-              <div className="overflow-y-auto pr-1 sm:pr-2">
-                {currentAnimation ? (
-                  <Workspace
-                    activeTab={activeTab}
-                    onTabChange={handleTabChange}
-                    currentAnimation={currentAnimation}
-                    renderJob={renderJob}
-                    videoUrl={videoUrl}
-                    onDownload={handleDownload}
-                    onCopyJson={handleCopyJson}
-                    onCopyCode={handleCopyCode}
-                    copiedJson={copiedJson}
-                    copiedCode={copiedCode}
-                  />
-                ) : (
-                  <EmptyWorkspace
-                    isAuthenticated={Boolean(user)}
-                    onExploreTemplates={() => setSidebarView('templates')}
-                    onRequireAuth={() => setShowAuth(true)}
-                  />
-                )}
+          <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl">
+            {/* Main Content Split: Top (Workspace) / Bottom (Video) */}
+            <div className="flex h-full flex-col">
+              {/* Top: Preview/Code/JSON */}
+              <div className={`flex w-full overflow-hidden transition-all duration-300 ease-in-out ${showVideoPanel ? 'h-3/5' : 'h-full'}`}>
+                <div className="h-full w-full overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+                  {currentAnimation ? (
+                    <Workspace
+                      activeTab={activeTab}
+                      onTabChange={handleTabChange}
+                      currentAnimation={currentAnimation}
+                      renderJob={renderJob}
+                      videoUrl={null} // Video is now separate
+                      onDownload={handleDownload} // Disabled in workspace, moved to panel
+                      onCopyJson={handleCopyJson}
+                      onCopyCode={handleCopyCode}
+                      copiedJson={copiedJson}
+                      copiedCode={copiedCode}
+                    />
+                  ) : (
+                    <EmptyWorkspace
+                      isAuthenticated={Boolean(user)}
+                      onExploreTemplates={() => setSidebarView('templates')}
+                      onRequireAuth={() => setShowAuth(true)}
+                    />
+                  )}
+                </div>
               </div>
 
-              <ChatPanel
-                className="self-stretch"
-                user={user}
-                messages={messages}
-                messagesEndRef={messagesEndRef}
-                messageDraft={messageDraft}
-                onMessageDraftChange={setMessageDraft}
-                onSendMessage={handleSendMessage}
-                sendingMessage={sendingMessage}
-                currentAnimation={currentAnimation}
-                onSaveConversation={handleSaveConversation}
-                savingConversation={savingConversation}
-              />
+              {/* Bottom: Video Result Panel */}
+              {showVideoPanel && (
+                <div className="flex h-2/5 w-full flex-col border-t border-white/10 bg-black/40">
+                  <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-4 py-2">
+                    <h3 className="text-xs font-medium uppercase tracking-wider text-white/70">Render Result</h3>
+                    <Button variant="ghost" size="sm" onClick={() => setVideoUrl(null)} className="h-6 w-6 p-0 text-white/50 hover:text-white">
+                      <span className="sr-only">Close</span>
+                      &times;
+                    </Button>
+                  </div>
+                  <div className="relative flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+                    {videoUrl ? (
+                      <div className="flex min-h-full flex-col items-center justify-center gap-6">
+                        <div className="relative w-full max-w-4xl overflow-hidden rounded-xl shadow-2xl ring-1 ring-white/10">
+                          <video
+                            src={videoUrl}
+                            controls
+                            className="w-full bg-black/50"
+                            autoPlay
+                            loop
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <Button size="sm" onClick={handleDownload} className="bg-white text-black hover:bg-white/90">
+                            Download MP4
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-white/50">
+                        <p>Loading video...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

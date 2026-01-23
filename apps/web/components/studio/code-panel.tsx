@@ -75,11 +75,11 @@ const CodePanel = memo(function CodePanel({
         )}
       </div>
 
-      <div className="relative flex max-h-[520px] overflow-auto">
+      <div className="relative flex max-h-[520px] overflow-auto bg-[#011627]">
         <Highlight
-          {...defaultProps}
-          theme={nightOwl}
-          language={(language as Language) ?? "tsx"}
+          {...(defaultProps as any)}
+          theme={nightOwl as any}
+          language={(language || "tsx") as any}
           code={code || ""}
         >
           {({
@@ -102,18 +102,21 @@ const CodePanel = memo(function CodePanel({
                   highlightClassName,
                   "w-full px-4 py-4 text-sm leading-6 text-white/90"
                 )}
-                style={style as React.CSSProperties}
+                style={{
+                  ...style as React.CSSProperties,
+                  backgroundColor: 'transparent', // Let parent handle background or transparent
+                }}
               >
                 <code className="whitespace-pre">
                   {tokens.length === 0
                     ? "// nothing here yet"
                     : tokens.map((line, index) => (
-                        <div key={index} {...getLineProps({ line })}>
-                          {line.map((token, tokenIndex) => (
-                            <span key={tokenIndex} {...getTokenProps({ token })} />
-                          ))}
-                        </div>
-                      ))}
+                      <div key={index} {...getLineProps({ line })}>
+                        {line.map((token, tokenIndex) => (
+                          <span key={tokenIndex} {...getTokenProps({ token })} />
+                        ))}
+                      </div>
+                    ))}
                 </code>
               </pre>
             </div>
