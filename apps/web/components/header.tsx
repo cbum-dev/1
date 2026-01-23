@@ -19,6 +19,9 @@ export default function Header() {
           <Link href="/" className="hover:text-white transition cursor-pointer">
             Home
           </Link>
+          <Link href="/studio" className="hover:text-white transition cursor-pointer">
+            Studio
+          </Link>
           <Link href="/docs" className="hover:text-white transition cursor-pointer">
             Docs
           </Link>

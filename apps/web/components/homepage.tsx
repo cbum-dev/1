@@ -7,6 +7,8 @@ import Dither from "@/components/Dither";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+import { BlurFade } from "@/components/ui/blur-fade";
+
 export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
@@ -29,23 +31,29 @@ export default function HomePage() {
 
       <section className="relative z-20 flex min-h-[calc(100vh-90px)] items-center justify-center px-6">
         <div className="max-w-3xl text-center">
-          <Badge
-            variant="secondary"
-            className="mx-auto mb-6 z-20 rounded-full border border-white/10 bg-white/10 text-white/80 backdrop-blur-xl"
-          >
-            <Sparkles className="mr-2 h-4 w-4" />
-            New Background + IR Pipeline
-          </Badge>
+          <BlurFade delay={0.2}>
+            <Badge
+              variant="secondary"
+              className="mx-auto mb-6 z-20 rounded-full border border-white/10 bg-white/10 text-white/80 backdrop-blur-xl"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              New Background + IR Pipeline
+            </Badge>
+          </BlurFade>
 
-          <h1 className="text-4xl z-20 md:text-6xl font-bold tracking-tight text-white">
-            Text → 2D Animations
-            <br />
-            powered by Gemini + Manim
-          </h1>
+          <BlurFade delay={0.3} className="z-20">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6">
+              Text → 2D Animations
+              <br />
+              <span className="text-white/60">powered by Gemini + Manim</span>
+            </h1>
+          </BlurFade>
 
-          <p className="mt-5 z-20 text-base md:text-lg text-white/70">
-            Generate an animation plan (IR), validate it, convert it into Manim code, and render a video — end to end.
-          </p>
+          <BlurFade delay={0.5} className="z-20">
+            <p className="mt-2 text-base md:text-lg text-white/70">
+              Generate an animation plan (IR), validate it, convert it into Manim code, and render a video — end to end.
+            </p>
+          </BlurFade>
 
           <div className="mt-8 z-20 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" className="rounded-full cursor-pointer px-8">
