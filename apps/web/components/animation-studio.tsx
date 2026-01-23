@@ -329,12 +329,16 @@ export default function AnimationStudio() {
     [clearVideoUrl]
   );
 
-  const handleAuthSuccess = (token: string, userData: any) => {
+  const handleAuthSuccess = (userData: any) => {
+    const token = getToken();
     setUser(userData as StudioUser);
     setShowAuth(false);
-    loadUserLimits(token);
-    loadUserHistory(token);
-    loadTemplates(token);
+
+    if (token) {
+      loadUserLimits(token);
+      loadUserHistory(token);
+      loadTemplates(token);
+    }
     setSidebarView('history');
   };
 

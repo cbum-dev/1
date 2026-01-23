@@ -29,7 +29,7 @@ const footerLinks = {
 
 export default function Footer() {
     return (
-        <footer className="relative w-full border-t border-white/5 bg-black pt-20 overflow-y-hidden">
+        <footer className="relative w-full border-t border-white/5 bg-black pt-20 overflow-hidden">
             <div className="pointer-events-none absolute -bottom-8 right-0 z-0 opacity-30">
                 <CircularText
                     text="MANIM*GEMINI*ANIMATION*"

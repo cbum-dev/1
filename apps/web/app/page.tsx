@@ -4,6 +4,8 @@ import Header from '@/components/header';
 import FeaturesSection from '@/components/landing/features-section';
 import PricingSection from '@/components/landing/pricing-section';
 import Footer from '@/components/landing/footer';
+import CtaSection from '@/components/landing/cta-section';
+import HeroImage from '@/components/landing/hero-image';
 
 export default function Home() {
   return (
@@ -12,9 +14,12 @@ export default function Home() {
 
       <main className="flex-1">
         <Homepage />
-        <InfiniteSliderText />
+        <HeroImage />
         <FeaturesSection />
         <PricingSection />
+        <CtaSection />
+        <InfiniteSliderText />
+
       </main>
 
       <Footer />
