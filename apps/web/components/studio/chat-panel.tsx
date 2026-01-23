@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Save } from "lucide-react";
 import { StudioChatProps } from "./types";
+import { cn } from "@/lib/utils";
 
 const ChatPanel = memo(function ChatPanel({
   user,
@@ -18,12 +19,18 @@ const ChatPanel = memo(function ChatPanel({
   currentAnimation,
   onSaveConversation,
   savingConversation,
+  className,
 }: StudioChatProps) {
   const canSend = Boolean(messageDraft.trim()) && !sendingMessage && Boolean(user);
   const canSave = Boolean(currentAnimation) && messages.length > 0 && Boolean(user);
 
   return (
-    <section className="flex w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-[0_0_30px_rgba(8,8,12,0.45)]">
+    <section
+      className={cn(
+        "flex w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-[0_0_30px_rgba(8,8,12,0.45)]",
+        className
+      )}
+    >
       <div className="flex-1 overflow-hidden">
         <div className="relative h-full overflow-y-auto px-6 py-6">
           <AnimatePresence initial={false}>

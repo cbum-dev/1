@@ -570,7 +570,7 @@ export default function AnimationStudio() {
   const hasActiveConversation = messages.length > 0 || Boolean(currentAnimation);
 
   return (
-    <StudioShell ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
+    <StudioShell className="h-screen" ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
       {showAuth && <AuthDialog onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />}
       <WorkspaceAccessDialog
         open={showAccessDialog}
@@ -581,7 +581,7 @@ export default function AnimationStudio() {
         onLogout={handleLogout}
       />
 
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[320px,1fr] lg:items-start">
+      <div className="flex h-full flex-col gap-6 overflow-hidden lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-10">
         <Sidebar
           user={user}
           onRequireAuth={handleRequireAuth}
@@ -598,9 +598,10 @@ export default function AnimationStudio() {
           hasActiveConversation={hasActiveConversation}
           onNewConversation={handleReset}
           onViewAccess={handleViewAccess}
+          className="lg:h-full"
         />
 
-        <div className="flex flex-1 flex-col gap-6">
+        <div className="flex h-full flex-col gap-6 overflow-hidden">
           <Header
             currentAnimation={currentAnimation}
             conversationSaved={conversationSaved}
@@ -613,40 +614,45 @@ export default function AnimationStudio() {
             onViewAccess={handleViewAccess}
           />
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            <ChatPanel
-              user={user}
-              messages={messages}
-              messagesEndRef={messagesEndRef}
-              messageDraft={messageDraft}
-              onMessageDraftChange={setMessageDraft}
-              onSendMessage={handleSendMessage}
-              sendingMessage={sendingMessage}
-              currentAnimation={currentAnimation}
-              onSaveConversation={handleSaveConversation}
-              savingConversation={savingConversation}
-            />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="grid flex-1 grid-rows-[1fr_auto] gap-6 overflow-hidden">
+              <div className="overflow-y-auto pr-1 sm:pr-2">
+                {currentAnimation ? (
+                  <Workspace
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    currentAnimation={currentAnimation}
+                    renderJob={renderJob}
+                    videoUrl={videoUrl}
+                    onDownload={handleDownload}
+                    onCopyJson={handleCopyJson}
+                    onCopyCode={handleCopyCode}
+                    copiedJson={copiedJson}
+                    copiedCode={copiedCode}
+                  />
+                ) : (
+                  <EmptyWorkspace
+                    isAuthenticated={Boolean(user)}
+                    onExploreTemplates={() => setSidebarView('templates')}
+                    onRequireAuth={() => setShowAuth(true)}
+                  />
+                )}
+              </div>
 
-            {currentAnimation ? (
-              <Workspace
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
+              <ChatPanel
+                className="self-stretch"
+                user={user}
+                messages={messages}
+                messagesEndRef={messagesEndRef}
+                messageDraft={messageDraft}
+                onMessageDraftChange={setMessageDraft}
+                onSendMessage={handleSendMessage}
+                sendingMessage={sendingMessage}
                 currentAnimation={currentAnimation}
-                renderJob={renderJob}
-                videoUrl={videoUrl}
-                onDownload={handleDownload}
-                onCopyJson={handleCopyJson}
-                onCopyCode={handleCopyCode}
-                copiedJson={copiedJson}
-                copiedCode={copiedCode}
+                onSaveConversation={handleSaveConversation}
+                savingConversation={savingConversation}
               />
-            ) : (
-              <EmptyWorkspace
-                isAuthenticated={Boolean(user)}
-                onExploreTemplates={() => setSidebarView('templates')}
-                onRequireAuth={() => setShowAuth(true)}
-              />
-            )}
+            </div>
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, History, MessageSquarePlus, Trash2, FolderOpen, ArrowUpRight, LockKeyhole, ShieldQuestion, Plus } from "lucide-react";
 import { StudioSidebarProps } from "./types";
+import { cn } from "@/lib/utils";
 
 const Sidebar = memo(function Sidebar({
   user,
@@ -25,9 +26,10 @@ const Sidebar = memo(function Sidebar({
   hasActiveConversation,
   onNewConversation,
   onViewAccess,
+  className,
 }: StudioSidebarProps) {
   return (
-    <aside className="flex h-full flex-col gap-6">
+    <aside className={cn("flex h-full flex-col gap-6 overflow-hidden", className)}>
       <Card className="flex flex-1 flex-col overflow-hidden border-white/10 bg-white/5">
         <CardHeader className="flex flex-col gap-4 pb-4">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.25em] text-white/60">
@@ -55,11 +57,11 @@ const Sidebar = memo(function Sidebar({
           </div>
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col gap-4">
+        <CardContent className="flex flex-1 flex-col overflow-hidden">
           <Tabs
             value={sidebarView}
             onValueChange={(value) => onSidebarViewChange(value as "templates" | "history")}
-            className="flex flex-1 flex-col"
+            className="flex flex-1 flex-col overflow-hidden"
           >
             <TabsList className="grid w-full grid-cols-2 rounded-full bg-white/10 p-1 text-xs uppercase tracking-[0.25em] text-white/50">
               <TabsTrigger
@@ -76,7 +78,7 @@ const Sidebar = memo(function Sidebar({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="templates" className="mt-4 flex-1 overflow-hidden">
+            <TabsContent value="templates" className="mt-4 flex-1 overflow-y-auto pr-1">
               {hasActiveConversation ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-black/20 p-6 text-center text-xs text-white/50">
                   <p>Templates are hidden while you are in a conversation.</p>
@@ -131,8 +133,8 @@ const Sidebar = memo(function Sidebar({
               )}
             </TabsContent>
 
-            <TabsContent value="history" className="mt-4 flex-1 overflow-hidden">
-              <div className="flex h-full flex-col gap-4">
+            <TabsContent value="history" className="mt-4 flex-1 overflow-y-auto pr-1">
+              <div className="flex h-full flex-col gap-4 pr-1">
                 <div className="space-y-2">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/40">Conversations</p>
                   <div className="space-y-2">

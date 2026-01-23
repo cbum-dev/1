@@ -39,6 +39,7 @@ export interface StudioSidebarProps {
   hasActiveConversation: boolean;
   onNewConversation: () => void;
   onViewAccess: () => void;
+  className?: string;
 }
 
 export interface StudioWorkspaceProps {
@@ -77,4 +78,5 @@ export interface StudioChatProps {
   currentAnimation: AnimationState | null;
   onSaveConversation: () => void;
   savingConversation: boolean;
+  className?: string;
 }
