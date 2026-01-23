@@ -25,7 +25,6 @@ export interface StudioUser {
 
 export interface StudioSidebarProps {
   user: StudioUser | null;
-  limits?: Record<string, unknown> | null;
   onRequireAuth: () => void;
   onLogout: () => void;
   sidebarView: 'templates' | 'history';
@@ -33,11 +32,13 @@ export interface StudioSidebarProps {
   loadingHistory: boolean;
   savedConversations: SavedConversation[];
   savedProjects: SavedProject[];
-  currentConversationId: string | null;
   onLoadConversation: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
   templates: Template[];
   onApplyTemplate: (template: Template) => void;
+  hasActiveConversation: boolean;
+  onNewConversation: () => void;
+  onViewAccess: () => void;
 }
 
 export interface StudioWorkspaceProps {
@@ -60,6 +61,9 @@ export interface StudioHeaderProps {
   onRender: () => void;
   canRender: boolean;
   rendering: boolean;
+  user: StudioUser | null;
+  onNewChat: () => void;
+  onViewAccess: () => void;
 }
 
 export interface StudioChatProps {

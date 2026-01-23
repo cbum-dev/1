@@ -7,6 +7,7 @@ import Sidebar from './studio/sidebar';
 import Header from './studio/header';
 import ChatPanel from './studio/chat-panel';
 import Workspace from './studio/workspace';
+import WorkspaceAccessDialog from './studio/workspace-access-dialog';
 import { Button } from './ui/button';
 import {
   sendChatMessage,
@@ -96,6 +97,7 @@ export default function AnimationStudio() {
   const [user, setUser] = useState<StudioUser | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [userLimits, setUserLimits] = useState<Record<string, unknown> | null>(null);
+  const [showAccessDialog, setShowAccessDialog] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState('');
   const [currentAnimation, setCurrentAnimation] = useState<AnimationState | null>(null);
@@ -193,6 +195,7 @@ export default function AnimationStudio() {
     removeToken();
     removeUser();
     setUser(null);
+    setShowAccessDialog(false);
     setMessages([]);
     setMessageDraft('');
     setCurrentAnimation(null);
@@ -545,33 +548,56 @@ export default function AnimationStudio() {
     copyToClipboard(currentAnimation.manim_code, 'code');
   };
 
+  const handleRequireAuth = () => {
+    setShowAccessDialog(false);
+    setShowAuth(true);
+  };
+
+  const handleViewAccess = () => {
+    if (user) {
+      setShowAccessDialog(true);
+    } else {
+      setShowAuth(true);
+    }
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as StudioTab);
   };
 
   const canRender = Boolean(currentAnimation && currentAnimation.validation.valid && !polling);
   const conversationSaved = Boolean(currentConversationId);
+  const hasActiveConversation = messages.length > 0 || Boolean(currentAnimation);
 
   return (
     <StudioShell ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
       {showAuth && <AuthDialog onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />}
+      <WorkspaceAccessDialog
+        open={showAccessDialog}
+        onOpenChange={setShowAccessDialog}
+        user={user}
+        limits={userLimits}
+        onRequireAuth={handleRequireAuth}
+        onLogout={handleLogout}
+      />
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[320px,1fr] lg:items-start">
         <Sidebar
           user={user}
-          limits={userLimits}
-          onRequireAuth={() => setShowAuth(true)}
+          onRequireAuth={handleRequireAuth}
           onLogout={handleLogout}
           sidebarView={sidebarView}
           onSidebarViewChange={setSidebarView}
           loadingHistory={loadingHistory}
           savedConversations={savedConversations}
           savedProjects={savedProjects}
-          currentConversationId={currentConversationId}
           onLoadConversation={handleLoadConversation}
           onDeleteConversation={handleDeleteConversation}
           templates={templates}
           onApplyTemplate={handleApplyTemplate}
+          hasActiveConversation={hasActiveConversation}
+          onNewConversation={handleReset}
+          onViewAccess={handleViewAccess}
         />
 
         <div className="flex flex-1 flex-col gap-6">
@@ -582,6 +608,9 @@ export default function AnimationStudio() {
             onRender={handleRender}
             canRender={canRender}
             rendering={polling}
+            user={user}
+            onNewChat={handleReset}
+            onViewAccess={handleViewAccess}
           />
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">

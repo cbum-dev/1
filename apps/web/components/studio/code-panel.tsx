@@ -4,6 +4,8 @@ import { memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, CheckCircle } from "lucide-react";
 import { motion } from "motion/react";
+import Highlight, { defaultProps, type Language, type RenderProps } from "prism-react-renderer";
+import nightOwl from "prism-react-renderer/themes/nightOwl";
 import { cn } from "@/lib/utils";
 
 interface CodePanelProps {
@@ -74,18 +76,49 @@ const CodePanel = memo(function CodePanel({
       </div>
 
       <div className="relative flex max-h-[520px] overflow-auto">
-        <div className="sticky left-0 top-0 flex min-w-[3.5rem] flex-col items-end gap-1 bg-black/30 px-3 py-4 text-[10px] font-mono text-white/30">
-          {lines.map((_, index) => (
-            <span key={index} className="leading-6">
-              {index + 1}
-            </span>
-          ))}
-        </div>
-        <pre className="w-full px-4 py-4 text-sm leading-6 text-white/90">
-          <code className="whitespace-pre">
-            {code || "// nothing here yet"}
-          </code>
-        </pre>
+        <Highlight
+          {...defaultProps}
+          theme={nightOwl}
+          language={(language as Language) ?? "tsx"}
+          code={code || ""}
+        >
+          {({
+            className: highlightClassName,
+            style,
+            tokens,
+            getLineProps,
+            getTokenProps,
+          }: RenderProps) => (
+            <div className="flex w-full text-left">
+              <div className="sticky left-0 top-0 flex min-w-[3.5rem] flex-col items-end gap-1 bg-black/30 px-3 py-4 text-[10px] font-mono text-white/30">
+                {lines.map((_, index) => (
+                  <span key={`line-${index}`} className="leading-6">
+                    {index + 1}
+                  </span>
+                ))}
+              </div>
+              <pre
+                className={cn(
+                  highlightClassName,
+                  "w-full px-4 py-4 text-sm leading-6 text-white/90"
+                )}
+                style={style as React.CSSProperties}
+              >
+                <code className="whitespace-pre">
+                  {tokens.length === 0
+                    ? "// nothing here yet"
+                    : tokens.map((line, index) => (
+                        <div key={index} {...getLineProps({ line })}>
+                          {line.map((token, tokenIndex) => (
+                            <span key={tokenIndex} {...getTokenProps({ token })} />
+                          ))}
+                        </div>
+                      ))}
+                </code>
+              </pre>
+            </div>
+          )}
+        </Highlight>
       </div>
     </motion.div>
   );
