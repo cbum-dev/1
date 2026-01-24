@@ -1,0 +1,54 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients for a pearlescent / shade effect -->
+    <linearGradient id="grad_top" x1="256" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.4"/>
+    </linearGradient>
+    
+    <linearGradient id="grad_bottom" x1="256" y1="512" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.4"/>
+    </linearGradient>
+    
+    <linearGradient id="grad_left" x1="0" y1="256" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.2"/>
+    </linearGradient>
+
+    <linearGradient id="grad_right" x1="512" y1="256" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.2"/>
+    </linearGradient>
+    
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Glow behind -->
+  <path d="M256 0 C256 0 200 180 0 256 C200 332 256 512 256 512 C256 512 312 332 512 256 C312 180 256 0 256 0Z" fill="white" fill-opacity="0.15" filter="url(#glow)"/>
+
+  <!-- Main Star Shape Construction -->
+  
+  <!-- Vertical Bar (Top Half) -->
+  <path d="M256 40 L256 256 L200 230 C220 180 240 100 256 40 Z" fill="url(#grad_top)" />
+  <path d="M256 40 L256 256 L312 230 C292 180 272 100 256 40 Z" fill="url(#grad_top)" />
+
+  <!-- Vertical Bar (Bottom Half) -->
+  <path d="M256 472 L256 256 L200 282 C220 332 240 412 256 472 Z" fill="url(#grad_bottom)" />
+  <path d="M256 472 L256 256 L312 282 C292 332 272 412 256 472 Z" fill="url(#grad_bottom)" />
+
+  <!-- Horizontal Bar (Left Half) -->
+  <path d="M40 256 L256 256 L230 200 C180 220 100 240 40 256 Z" fill="url(#grad_left)" />
+  <path d="M40 256 L256 256 L230 312 C180 292 100 272 40 256 Z" fill="url(#grad_left)" />
+
+  <!-- Horizontal Bar (Right Half) -->
+  <path d="M472 256 L256 256 L282 200 C332 220 412 240 472 256 Z" fill="url(#grad_right)" />
+  <path d="M472 256 L256 256 L282 312 C332 292 412 272 472 256 Z" fill="url(#grad_right)" />
+  
+  <!-- Center Core -->
+  <circle cx="256" cy="256" r="12" fill="white" fill-opacity="0.95" />
+
+</svg>

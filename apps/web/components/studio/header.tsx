@@ -28,8 +28,8 @@ const Header = memo(function Header({
     <header className="flex flex-shrink-0 flex-col gap-4 rounded-3xl border border-white/10 bg-black/40 px-6 py-4 backdrop-blur-md md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
         {/* ... Logo area kept same ... */}
-        <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-2 text-indigo-300">
-          <Sparkles className="h-5 w-5" />
+        <div className="flex items-center gap-2 rounded-lg p-2">
+          <img src="/logo.svg" alt="ManimFlow" className="h-8 w-8" />
         </div>
         <div className="space-y-0.5">
           <motion.h1

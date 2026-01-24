@@ -38,7 +38,7 @@ export default function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 md:pt-6 px-4">
         <nav className="flex w-full max-w-5xl items-center justify-between rounded-full border border-white/10 bg-white/10 px-6 py-3 backdrop-blur-xl shadow-lg relative z-50">
           <div className="flex items-center gap-2 text-white">
-            <Sparkles className="h-5 w-5" />
+            <img src="/logo.svg" alt="ManimFlow" className="h-8 w-8" />
             <span className="font-semibold">ManimFlow</span>
           </div>
 

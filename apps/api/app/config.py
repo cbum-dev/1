@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     ENABLE_MARKETPLACE: bool = True
     
 
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://1-web-seven.vercel.app"
     
     class Config:
         env_file = ".env"
