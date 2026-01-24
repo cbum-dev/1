@@ -59,85 +59,91 @@ export default function AuthDialog({ isOpen, onClose, onSuccess, defaultMode = '
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[400px] border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl p-0 gap-0 overflow-hidden text-white">
-        <div className="p-6 pt-8 text-center bg-white/5 border-b border-white/5">
-          <div className="mx-auto flex items-center justify-center gap-2 text-primary mb-4">
-            <Sparkles className="h-6 w-6 text-indigo-400" />
-          </div>
-          <DialogTitle className="text-2xl font-bold tracking-tight mb-1 text-white">
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
-          </DialogTitle>
-          <DialogDescription className="text-white/60">
-            {mode === 'login'
-              ? 'Enter your details to sign in.'
-              : 'Join ManimFlow to start creating.'}
-          </DialogDescription>
-        </div>
-
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="m@example.com"
-                required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
-              />
+      <DialogContent className="sm:max-w-[420px] p-0 bg-transparent border-none shadow-none text-white overflow-visible">
+        {/* Outer Glass Box */}
+        <div className="bg-white/10 border border-white/10 backdrop-blur-xl p-2 sm:p-3 rounded-3xl shadow-2xl ring-1 ring-white/20">
+          {/* Inner Dark Box */}
+          <div className="bg-black/90 border border-white/5 rounded-2xl overflow-hidden relative">
+            <div className="p-6 pt-8 text-center bg-white/5 border-b border-white/5">
+              <div className="mx-auto flex items-center justify-center gap-2 text-primary mb-4">
+                <Sparkles className="h-6 w-6 text-indigo-400" />
+              </div>
+              <DialogTitle className="text-2xl font-bold tracking-tight mb-1 text-white">
+                {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+              </DialogTitle>
+              <DialogDescription className="text-white/60">
+                {mode === 'login'
+                  ? 'Enter your details to sign in.'
+                  : 'Join ManimFlow to start creating.'}
+              </DialogDescription>
             </div>
 
-            {mode === 'register' && (
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="johndoe"
-                  required
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
-                />
-              </div>
-            )}
+            <div className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="m@example.com"
+                    required
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                {mode === 'login' && (
-                  <Link href="#" className="text-xs text-indigo-400 hover:text-indigo-300">Forgot password?</Link>
+                {mode === 'register' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="johndoe"
+                      required
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
+                    />
+                  </div>
                 )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {mode === 'login' && (
+                      <Link href="#" className="text-xs text-indigo-400 hover:text-indigo-300">Forgot password?</Link>
+                    )}
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
+                  />
+                </div>
+
+                {error && (
+                  <div className="text-sm text-red-400 font-medium text-center bg-red-900/20 p-2 rounded border border-red-900/30">
+                    {error}
+                  </div>
+                )}
+
+                <Button className="w-full cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white" type="submit" disabled={loading}>
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (mode === 'login' ? 'Sign In' : 'Sign Up')}
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center text-sm text-white/50">
+                {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+                <button onClick={toggleMode} className="font-semibold text-indigo-400 hover:text-indigo-300 focus:outline-none hover:underline">
+                  {mode === 'login' ? 'Sign up' : 'Log in'}
+                </button>
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500"
-              />
             </div>
-
-            {error && (
-              <div className="text-sm text-red-400 font-medium text-center bg-red-900/20 p-2 rounded border border-red-900/30">
-                {error}
-              </div>
-            )}
-
-            <Button className="w-full cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white" type="submit" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (mode === 'login' ? 'Sign In' : 'Sign Up')}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-white/50">
-            {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={toggleMode} className="font-semibold text-indigo-400 hover:text-indigo-300 focus:outline-none hover:underline">
-              {mode === 'login' ? 'Sign up' : 'Log in'}
-            </button>
           </div>
         </div>
       </DialogContent>

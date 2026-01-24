@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 
 export interface BentoCardProps {
   color?: string;
+  image?: string;
   title?: string;
   description?: string;
   label?: string;
@@ -11,20 +12,11 @@ export interface BentoCardProps {
   icon?: React.ReactNode;
 }
 
-export interface BentoProps {
-  cards?: BentoCardProps[];
-  textAutoHide?: boolean;
-  enableStars?: boolean;
-  enableSpotlight?: boolean;
-  enableBorderGlow?: boolean;
-  disableAnimations?: boolean;
-  spotlightRadius?: number;
-  particleCount?: number;
-  enableTilt?: boolean;
-  glowColor?: string;
-  clickEffect?: boolean;
-  enableMagnetism?: boolean;
-}
+// ... (Rest of file interface)
+
+
+
+
 
 const DEFAULT_PARTICLE_COUNT = 12;
 const DEFAULT_SPOTLIGHT_RADIUS = 300;
@@ -494,7 +486,7 @@ const BentoCardGrid: React.FC<{
   gridRef?: React.RefObject<HTMLDivElement | null>;
 }> = ({ children, gridRef }) => (
   <div
-    className="bento-section grid gap-2 p-3 max-w-[54rem] select-none relative"
+    className="bento-section grid gap-2 p-3 max-w-[1300px] select-none relative"
     style={{ fontSize: 'clamp(1rem, 0.9rem + 0.5vw, 1.5rem)' }}
     ref={gridRef}
   >
@@ -676,9 +668,9 @@ const MagicBento: React.FC<BentoProps> = ({
       )}
 
       <BentoCardGrid gridRef={gridRef}>
-        <div className="card-responsive grid gap-2">
+        <div className="card-responsive w-full grid gap-2">
           {cards.map((card, index) => {
-            const baseClassName = `card flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-colors duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${enableBorderGlow ? 'card--border-glow' : ''
+            const baseClassName = `card group flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-colors duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${enableBorderGlow ? 'card--border-glow' : ''
               }`;
 
             const cardStyle = {
@@ -704,11 +696,21 @@ const MagicBento: React.FC<BentoProps> = ({
                   clickEffect={clickEffect}
                   enableMagnetism={enableMagnetism}
                 >
-                  <div className="card__header flex justify-between gap-3 relative text-white items-center">
+                  {card.image && (
+                    <div className="absolute right-0 bottom-0 left-0 h-[80%] z-0 rounded-b-[20px] overflow-hidden opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+                      <img
+                        src={card.image}
+                        alt={card.title}
+                        className="w-full h-full object-cover object-top scale-105 group-hover:scale-100 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
+                    </div>
+                  )}
+                  <div className="card__header flex justify-between gap-3 relative text-white items-center z-10">
                     <span className="card__label text-base font-semibold">{card.label}</span>
                     {card.icon && <div className="text-white/80">{card.icon}</div>}
                   </div>
-                  <div className="card__content flex flex-col relative text-white mt-4">
+                  <div className="card__content flex flex-col relative text-white mt-4 z-10">
                     <h3 className={`card__title font-normal text-xl m-0 mb-2 ${textAutoHide ? 'text-clamp-1' : ''}`}>
                       {card.title}
                     </h3>
@@ -837,14 +839,27 @@ const MagicBento: React.FC<BentoProps> = ({
                   el.addEventListener('click', handleClick);
                 }}
               >
-                <div className="card__header flex justify-between gap-3 relative text-white">
-                  <span className="card__label text-base">{card.label}</span>
+                {card.image && (
+                  <div className="absolute right-0 bottom-0 left-0 h-[80%] z-0 rounded-b-[20px] overflow-hidden opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="w-full h-full object-cover object-top scale-105 group-hover:scale-100 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
+                  </div>
+                )}
+                <div className="card__header flex justify-between gap-3 relative text-white items-center z-10">
+                  <span className="card__label text-base font-semibold">{card.label}</span>
+                  {card.icon && <div className="text-white/80">{card.icon}</div>}
                 </div>
-                <div className="card__content flex flex-col relative text-white">
-                  <h3 className={`card__title font-normal text-base m-0 mb-1 ${textAutoHide ? 'text-clamp-1' : ''}`}>
+                <div className="card__content flex flex-col relative text-white mt-4 z-10">
+                  <h3 className={`card__title font-normal text-xl m-0 mb-2 ${textAutoHide ? 'text-clamp-1' : ''}`}>
                     {card.title}
                   </h3>
-                  <p className={`card__description text-xs leading-5 opacity-90 ${textAutoHide ? 'text-clamp-2' : ''}`}>
+                  <p
+                    className={`card__description text-sm leading-6 opacity-70 ${textAutoHide ? 'text-clamp-2' : ''}`}
+                  >
                     {card.description}
                   </p>
                 </div>

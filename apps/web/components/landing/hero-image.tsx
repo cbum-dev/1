@@ -10,7 +10,7 @@ export default function HeroImage() {
                 initial={{ opacity: 0, y: 40, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-                className="relative mx-auto w-full max-w-6xl rounded-xl border border-white/10 bg-black/50 shadow-2xl backdrop-blur-xl pointer-events-auto"
+                className="relative mx-auto w-full max-w-7xl rounded-xl border border-white/10 bg-black/50 shadow-2xl backdrop-blur-xl pointer-events-auto"
             >
                 <div className="absolute -top-px left-20 right-20 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-20" />
                 <div className="absolute -bottom-px left-20 right-20 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-20" />

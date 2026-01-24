@@ -27,13 +27,15 @@ const features: BentoCardProps[] = [
         label: "Speed",
         icon: <Zap className="h-5 w-5 text-purple-400" />,
         color: "#0a0a0a",
+        image: "/feature.png",
     },
     {
         title: "Audio Addition",
         description: "Sync voiceovers and sound effects automatically.",
         label: "Coming Soon",
         icon: <Music className="h-5 w-5 text-pink-400" />,
-        color: "#110020", // Slightly different bg to highlight
+        color: "#110020",
+        image: "/studio.png",
     },
     {
         title: "Time Travel",

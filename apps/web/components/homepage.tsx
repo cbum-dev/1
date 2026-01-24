@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { BlurFade } from "@/components/ui/blur-fade";
+import FuzzyText from "./FuzzyText";
+import Shuffle from "./Shuffle";
+import RotatingText from "./RotatingText";
 
 export default function HomePage() {
   return (
@@ -40,12 +43,23 @@ export default function HomePage() {
               New Background + IR Pipeline
             </Badge>
           </BlurFade>
+          <br />
 
           <BlurFade delay={0.3} className="z-20">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6">
-              Text → 2D Animations
-              <br />
-              <span className="text-white/60">powered by Gemini + Manim</span>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6 flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+              Manimflow
+              <RotatingText
+                texts={['<Gemini/>', '<Manim/>', '<Video/>', '<Export/>']}
+                mainClassName="px-2 sm:px-2 md:px-3 bg-[#0e0e0e] text-white overflow-hidden py-0.5 sm:py-1 md:py-2 justify-center rounded-lg"
+                staggerFrom="last"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "-120%" }}
+                staggerDuration={0.025}
+                splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1 md:pb-1"
+                transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                rotationInterval={2000}
+              />
             </h1>
           </BlurFade>
 

@@ -95,7 +95,7 @@ export default function PricingSection() {
                         const CardContent = () => (
                             <>
                                 {plan.highlight && (
-                                    <div className="absolute -top-4 left-0 right-0 mx-auto w-fit rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-lg z-50">
+                                    <div className="mx-auto w-fit rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-lg z-50">
                                         Most Popular
                                     </div>
                                 )}
