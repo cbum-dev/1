@@ -4,8 +4,9 @@ import { memo } from "react";
 import { motion } from "motion/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, Download, Sparkles, Info, Bug } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Download, Sparkles, Info, Bug, Mic, Volume2 } from "lucide-react";
 import CodePanel from "./code-panel";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -22,6 +23,8 @@ const Workspace = memo(function Workspace({
   onCopyCode,
   copiedJson,
   copiedCode,
+  audioConfig,
+  onAudioConfigChange,
 }: StudioWorkspaceProps) {
   const validationErrors = currentAnimation?.validation.errors ?? [];
 
@@ -37,6 +40,9 @@ const Workspace = memo(function Workspace({
           </TabsTrigger>
           <TabsTrigger value="code" className="rounded-full data-[state=active]:bg-white text-grey-400 data-[state=active]:text-black">
             Manim Code
+          </TabsTrigger>
+          <TabsTrigger value="audio" className="rounded-full data-[state=active]:bg-white text-grey-400 data-[state=active]:text-black">
+            Audio
           </TabsTrigger>
         </TabsList>
 
@@ -99,6 +105,52 @@ const Workspace = memo(function Workspace({
             onCopy={onCopyCode}
             copied={copiedCode}
           />
+        </TabsContent>
+
+        <TabsContent value="audio" className="mt-0">
+          <Card className="border-white/10 bg-white/5 text-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Mic className="h-5 w-5 text-white/60" />
+                Audio Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="audio-enabled"
+                  checked={audioConfig.enabled}
+                  onChange={(e) => onAudioConfigChange({ ...audioConfig, enabled: e.target.checked })}
+                  className="h-5 w-5 rounded border-white/20 bg-white/10 accent-indigo-500 cursor-pointer"
+                />
+                <Label htmlFor="audio-enabled" className="text-base font-medium text-white cursor-pointer select-none">
+                  Enable Voiceover
+                </Label>
+              </div>
+
+              {audioConfig.enabled && (
+                <div className="space-y-3">
+                  <Label htmlFor="voice-text" className="text-white/80">
+                    Script (Text to Speech)
+                  </Label>
+                  <Textarea
+                    id="voice-text"
+                    value={audioConfig.text}
+                    onChange={(e) => onAudioConfigChange({ ...audioConfig, text: e.target.value })}
+                    placeholder="Enter the text you want the narrator to speak..."
+                    className="min-h-[200px] resize-none border-white/10 bg-black/20 text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-0 text-base leading-relaxed"
+                  />
+                  <div className="rounded-lg bg-indigo-500/10 border border-indigo-500/20 p-3">
+                    <p className="text-xs text-indigo-200 flex items-start gap-2">
+                      <Volume2 className="h-4 w-4 shrink-0 mt-0.5" />
+                      Audio will be generated using Google TTS and merged with your video. The video duration acts as the master timeline.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </section>

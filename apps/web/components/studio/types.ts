@@ -14,6 +14,13 @@ export interface AnimationState {
   validation: { valid: boolean; errors: string[] };
 }
 
+export interface AudioConfig {
+  enabled: boolean;
+  text: string;
+  voice: string;
+  audio_url?: string;
+}
+
 export interface StudioUser {
   id: string;
   email: string;
@@ -54,6 +61,8 @@ export interface StudioWorkspaceProps {
   onCopyCode: () => void;
   copiedJson: boolean;
   copiedCode: boolean;
+  audioConfig: AudioConfig;
+  onAudioConfigChange: (config: AudioConfig) => void;
 }
 
 export interface StudioHeaderProps {

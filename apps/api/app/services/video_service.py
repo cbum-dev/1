@@ -46,6 +46,30 @@ class VideoService:
                 if os.path.exists(video_file):
                     os.remove(video_file)
     
+    def add_audio_track(self, video_path: str, audio_path: str, output_path: str) -> str:
+        """
+        Merge video and audio files.
+        Trims to the shortest stream (usually video).
+        """
+        cmd = [
+            'ffmpeg',
+            '-i', video_path,
+            '-i', audio_path,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-map', '0:v:0',
+            '-map', '1:a:0',
+            '-shortest',
+            output_path,
+            '-y'
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True, capture_output=True)
+            return output_path
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"FFmpeg audio merge failed: {e.stderr.decode()}")
+            
     def cleanup_file(self, file_path: str):
         """Delete a file if it exists"""
         if os.path.exists(file_path):

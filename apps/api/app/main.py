@@ -31,10 +31,10 @@ from .models import (
 from .services.gemini_service import GeminiService
 from .services.manim_service import ManimService
 from .services.video_service import VideoService
+from .services.audio_service import AudioService
 from .services.auth_service import AuthService
 from .services.template_service import TemplateService
 from .services.job_queue_service import JobQueueService
-from .services.stripe_service import StripeService
 from .services.marketplace_service import MarketplaceService
 from .database.database import get_db, init_db
 from .database.models import (
@@ -72,10 +72,10 @@ app.add_middleware(
 gemini_service = GeminiService()
 manim_service = ManimService()
 video_service = VideoService()
+audio_service = AudioService()
 auth_service = AuthService()
 template_service = TemplateService()
 job_queue_service = JobQueueService()
-stripe_service = StripeService()
 marketplace_service = MarketplaceService()
 
 

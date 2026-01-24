@@ -19,4 +19,6 @@ dependencies = [
     "sqlalchemy>=2.0.45",
     "stripe>=14.2.0",
     "psycopg2-binary>=2.9.11",
+    "gtts>=2.5.1",
+    "moviepy>=1.0.3",
 ]

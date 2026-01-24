@@ -50,11 +50,19 @@ class Scene(BaseModel):
     objects: List[AnimationObject] = Field(max_length=10)  
 
 
+class AudioConfig(BaseModel):
+    enabled: bool = False
+    text: Optional[str] = None
+    voice: str = "en"
+    audio_url: Optional[str] = None
+
+
 class AnimationIR(BaseModel):
     version: str = "1.0"
     metadata: dict
     scenes: List[Scene]
-    style: Optional[str] = "default"  
+    style: Optional[str] = "default"
+    audio: Optional[AudioConfig] = None
 
     @field_validator('scenes')
     @classmethod

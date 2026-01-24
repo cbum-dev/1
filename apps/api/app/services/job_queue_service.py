@@ -4,6 +4,7 @@ from datetime import datetime
 from ..models import RenderJob, RenderJobStatus, AnimationIR
 from .manim_service import ManimService
 from .video_service import VideoService
+from .audio_service import AudioService
 from ..config import get_settings
 
 settings = get_settings()
@@ -16,6 +17,7 @@ class JobQueueService:
     def __init__(self):
         self.manim_service = ManimService()
         self.video_service = VideoService()
+        self.audio_service = AudioService()
         self.max_concurrent_jobs = 3
         self.current_jobs = 0
     
@@ -74,6 +76,31 @@ class JobQueueService:
             )
             
             final_video = self.video_service.merge_videos(video_files, output_path)
+            
+            # Process Audio
+            if job.animation_ir.audio and job.animation_ir.audio.enabled:
+                try:
+                    audio_path = None
+                    if job.animation_ir.audio.text:
+                        audio_path = self.audio_service.generate_voiceover(
+                            job.animation_ir.audio.text,
+                            job.animation_ir.audio.voice
+                        )
+                    
+                    if audio_path:
+                        video_with_audio = output_path.replace('.mp4', '_audio.mp4')
+                        # Use add_audio_track to merge
+                        self.video_service.add_audio_track(final_video, audio_path, video_with_audio)
+                        
+                        # Cleanup intermediate video (optional, keeping clean)
+                        if os.path.exists(final_video):
+                            os.remove(final_video)
+                        self.audio_service.cleanup_audio(audio_path)
+                        
+                        final_video = video_with_audio
+                except Exception as e:
+                    print(f"Audio processing failed: {str(e)}")
+                    # We continue with silent video if audio fails
             
             # Convert format if needed
             if job.output_format == "gif":

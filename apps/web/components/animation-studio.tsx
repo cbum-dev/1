@@ -35,12 +35,12 @@ import {
   ChatMessage,
   updateProject,
 } from '@/lib/api';
-import { AnimationState, StudioUser } from './studio/types';
+import { AnimationState, StudioUser, AudioConfig } from './studio/types';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-type StudioTab = 'preview' | 'json' | 'code' | 'video';
+type StudioTab = 'preview' | 'json' | 'code' | 'video' | 'audio';
 
 function AmbientBackdrop() {
   return (
@@ -120,6 +120,11 @@ export default function AnimationStudio() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [savingConversation, setSavingConversation] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [audioConfig, setAudioConfig] = useState<AudioConfig>({
+    enabled: false,
+    text: '',
+    voice: 'en',
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -524,8 +529,14 @@ export default function AnimationStudio() {
     }
 
     try {
+      // Inject audio config
+      const irPayload = { ...currentAnimation.json_ir };
+      if (audioConfig.enabled) {
+        irPayload.audio = audioConfig;
+      }
+
       const job = await queueRenderJob(
-        currentAnimation.json_ir,
+        irPayload,
         {
           output_format: 'mp4',
           quality: 'medium',
@@ -736,6 +747,8 @@ export default function AnimationStudio() {
                       onCopyCode={handleCopyCode}
                       copiedJson={copiedJson}
                       copiedCode={copiedCode}
+                      audioConfig={audioConfig}
+                      onAudioConfigChange={setAudioConfig}
                     />
                   ) : (
                     <EmptyWorkspace

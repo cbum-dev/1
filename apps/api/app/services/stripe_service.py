@@ -1,232 +1,69 @@
+import os
+import json
 import stripe
-from typing import Optional, Dict
-from datetime import datetime
-from ..config import get_settings
-from ..database.models import DBUser, UserTierEnum
+from fastapi import FastAPI, responses, Request, HTTPException
+from dotenv import load_dotenv
+from pathlib import Path
 
-settings = get_settings()
-stripe.api_key = settings.STRIPE_SECRET_KEY
+env_path = Path(".") / ".env"
+load_dotenv(dotenv_path=env_path)
 
-
-# Pricing (in cents)
-PRICING = {
-    "pro_monthly": {
-        "amount": 1999, 
-        "currency": "usd",
-        "interval": "month",
-        "tier": UserTierEnum.PRO,
-        "credits": 100
-    },
-    "pro_yearly": {
-        "amount": 19999, 
-        "currency": "usd",
-        "interval": "year",
-        "tier": UserTierEnum.PRO,
-        "credits": 100
-    },
-    "enterprise_monthly": {
-        "amount": 9999, 
-        "currency": "usd",
-        "interval": "month",
-        "tier": UserTierEnum.ENTERPRISE,
-        "credits": 1000
-    }
-}
+app = FastAPI()
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
-class StripeService:
-    """Service for handling Stripe payments and subscriptions"""
-    
-    def __init__(self):
-        self.webhook_secret = settings.STRIPE_WEBHOOK_SECRET
-    
-    def create_customer(self, user: DBUser) -> str:
-        """Create a Stripe customer for a user"""
-        try:
-            customer = stripe.Customer.create(
-                email=user.email,
-                metadata={
-                    "user_id": user.id,
-                    "username": user.username
-                }
-            )
-            return customer.id
-        except stripe.error.StripeError as e:
-            raise ValueError(f"Failed to create Stripe customer: {str(e)}")
-    
-    def create_checkout_session(
-        self,
-        user: DBUser,
-        plan: str,
-        success_url: str,
-        cancel_url: str
-    ) -> Dict:
-        """Create a Stripe Checkout session for subscription"""
-        if plan not in PRICING:
-            raise ValueError(f"Invalid plan: {plan}")
-        
-        pricing = PRICING[plan]
-        
 
-        if not user.stripe_customer_id:
-            user.stripe_customer_id = self.create_customer(user)
-        
-        try:
-            session = stripe.checkout.Session.create(
-                customer=user.stripe_customer_id,
-                payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": pricing["currency"],
-                        "product_data": {
-                            "name": f"Animation Studio {pricing['tier'].value.capitalize()} Plan",
-                            "description": f"{pricing['credits']} credits per {pricing['interval']}"
-                        },
-                        "unit_amount": pricing["amount"],
-                        "recurring": {
-                            "interval": pricing["interval"]
-                        }
+@app.get("/checkout/")
+async def create_checkout_session(price: int = 10):
+    checkout_session = stripe.checkout.Session.create(
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": "FastAPI Stripe Checkout",
                     },
-                    "quantity": 1
-                }],
-                mode="subscription",
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={
-                    "user_id": user.id,
-                    "plan": plan
-                }
-            )
-            
-            return {
-                "session_id": session.id,
-                "url": session.url
+                    "unit_amount": price * 100,
+                },
+                "quantity": 1,
             }
-        except stripe.error.StripeError as e:
-            raise ValueError(f"Failed to create checkout session: {str(e)}")
-    
-    def create_marketplace_checkout(
-        self,
-        user: DBUser,
-        item_price: float,
-        item_title: str,
-        item_id: str,
-        success_url: str,
-        cancel_url: str
-    ) -> Dict:
-        """Create a one-time payment for marketplace item"""
+        ],
+        metadata={
+            "user_id": 3,
+            "email": "abc@gmail.com",
+            "request_id": 1234567890
+        },
+        mode="payment",
+        success_url=os.getenv("BASE_URL") + "/success/",
+        cancel_url=os.getenv("BASE_URL") + "/cancel/",
+        customer_email="ping@fastapitutorial.com",
+    )
+    return responses.RedirectResponse(checkout_session.url, status_code=303)
 
-        if not user.stripe_customer_id:
-            user.stripe_customer_id = self.create_customer(user)
-        
-        try:
-            session = stripe.checkout.Session.create(
-                customer=user.stripe_customer_id,
-                payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {
-                            "name": item_title,
-                            "description": "Animation Template"
-                        },
-                        "unit_amount": int(item_price * 100)  
-                    },
-                    "quantity": 1
-                }],
-                mode="payment",
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={
-                    "user_id": user.id,
-                    "item_id": item_id,
-                    "type": "marketplace_purchase"
-                }
-            )
-            
-            return {
-                "session_id": session.id,
-                "url": session.url
-            }
-        except stripe.error.StripeError as e:
-            raise ValueError(f"Failed to create marketplace checkout: {str(e)}")
+
+@app.post("/webhook/")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    event = None
+
+    try:
+        event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+    except ValueError as e:
+        print("Invalid payload")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        print("Invalid signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
     
-    def cancel_subscription(self, subscription_id: str) -> bool:
-        """Cancel a subscription at period end"""
-        try:
-            subscription = stripe.Subscription.modify(
-                subscription_id,
-                cancel_at_period_end=True
-            )
-            return subscription.cancel_at_period_end
-        except stripe.error.StripeError as e:
-            raise ValueError(f"Failed to cancel subscription: {str(e)}")
-    
-    def resume_subscription(self, subscription_id: str) -> bool:
-        """Resume a canceled subscription"""
-        try:
-            subscription = stripe.Subscription.modify(
-                subscription_id,
-                cancel_at_period_end=False
-            )
-            return not subscription.cancel_at_period_end
-        except stripe.error.StripeError as e:
-            raise ValueError(f"Failed to resume subscription: {str(e)}")
-    
-    def get_subscription(self, subscription_id: str) -> Optional[Dict]:
-        """Get subscription details"""
-        try:
-            subscription = stripe.Subscription.retrieve(subscription_id)
-            return {
-                "id": subscription.id,
-                "status": subscription.status,
-                "current_period_start": datetime.fromtimestamp(subscription.current_period_start),
-                "current_period_end": datetime.fromtimestamp(subscription.current_period_end),
-                "cancel_at_period_end": subscription.cancel_at_period_end
-            }
-        except stripe.error.StripeError:
-            return None
-    
-    def construct_webhook_event(self, payload: bytes, sig_header: str):
-        """Verify and construct webhook event"""
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, self.webhook_secret
-            )
-            return event
-        except ValueError as e:
-            raise ValueError("Invalid payload")
-        except stripe.error.SignatureVerificationError as e:
-            raise ValueError("Invalid signature")
-    
-    def handle_subscription_created(self, subscription: Dict) -> Dict:
-        """Handle subscription.created webhook"""
-        return {
-            "user_id": subscription.get("metadata", {}).get("user_id"),
-            "subscription_id": subscription.get("id"),
-            "customer_id": subscription.get("customer"),
-            "status": subscription.get("status"),
-            "current_period_start": datetime.fromtimestamp(subscription.get("current_period_start")),
-            "current_period_end": datetime.fromtimestamp(subscription.get("current_period_end"))
-        }
-    
-    def handle_subscription_updated(self, subscription: Dict) -> Dict:
-        """Handle subscription.updated webhook"""
-        return self.handle_subscription_created(subscription)
-    
-    def handle_subscription_deleted(self, subscription: Dict) -> Dict:
-        """Handle subscription.deleted webhook"""
-        return {
-            "user_id": subscription.get("metadata", {}).get("user_id"),
-            "subscription_id": subscription.get("id"),
-            "status": "canceled"
-        }
-    
-    def handle_payment_succeeded(self, payment_intent: Dict) -> Dict:
-        """Handle payment_intent.succeeded webhook"""
-        return {
-            "payment_intent_id": payment_intent.get("id"),
-            "amount": payment_intent.get("amount"),
-            "customer_id": payment_intent.get("customer"),
-            "metadata": payment_intent.get("metadata", {})
-        }
+    print("event received is", event)
+    if event["type"] == "checkout.session.completed":
+        payment = event["data"]["object"]
+        amount = payment["amount_total"]
+        currency = payment["currency"]
+        user_id = payment["metadata"]["user_id"] # get custom user id from metadata
+        user_email = payment["customer_details"]["email"]
+        user_name = payment["customer_details"]["name"]
+        order_id = payment["id"]
+        # save to db
+        # send email in background task
+    return {}
