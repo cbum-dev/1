@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 
 export default function HeroImage() {
     return (
-        <section className="relative w-full pb-20 pt-5 px-6 flex justify-center overflow-visible z-30 -mt-20 md:-mt-32 pointer-events-none">
+        <section className="relative w-full pb-20 pt-5 px-6 flex justify-center overflow-visible z-30 -mt-12 md:-mt-32 pointer-events-none">
             <motion.div
                 initial={{ opacity: 0, y: 40, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
