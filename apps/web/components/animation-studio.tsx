@@ -128,6 +128,54 @@ export default function AnimationStudio() {
 
   const [currentStyle, setCurrentStyle] = useState("default");
 
+  const [codeModified, setCodeModified] = useState(false);
+
+  // Resizable layout state
+  const [topSectionHeight, setTopSectionHeight] = useState(60);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+
+  const handleAnimationChange = (newState: AnimationState) => {
+    if (currentAnimation) {
+      // Check if code was modified (CodePanel edits)
+      if (newState.manim_code !== currentAnimation.manim_code) {
+        setCodeModified(true);
+      }
+      // Check if IR was modified (DesignPanel edits). Reset code modification flag because IR is now the source of truth again
+      // (Visual edits invalidate custom code)
+      if (newState.json_ir !== currentAnimation.json_ir) {
+        setCodeModified(false);
+      }
+    }
+    setCurrentAnimation(newState);
+  };
+
+  // Resize Handlers
+  const handleDragStart = useCallback(() => {
+    isDraggingRef.current = true;
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none'; // Prevent text selection
+  }, []);
+
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingRef.current || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeY = e.clientY - containerRect.top;
+    const newHeightPercentage = (relativeY / containerRect.height) * 100;
+    // Clamp between 20% and 80%
+    setTopSectionHeight(Math.max(20, Math.min(80, newHeightPercentage)));
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    isDraggingRef.current = false;
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.body.style.cursor = 'default';
+    document.body.style.userSelect = 'auto';
+  }, [handleDragMove]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -516,13 +564,14 @@ export default function AnimationStudio() {
         {
           output_format: 'mp4',
           quality: 'medium',
+          manim_code: codeModified ? currentAnimation.manim_code : undefined,
         },
         token
       );
 
       setRenderJob(job);
+      setVideoUrl(null);
       setPolling(true);
-      setActiveTab('video');
       pollJobStatus(job.job_id, token);
     } catch (error: any) {
       console.error('Render error:', error);
@@ -637,8 +686,8 @@ export default function AnimationStudio() {
   const canRender = Boolean(currentAnimation && currentAnimation.validation.valid && !polling);
   const conversationSaved = Boolean(currentConversationId);
   const hasActiveConversation = messages.length > 0 || Boolean(currentAnimation);
-  // Video panel is only visible when we have a video URL or a render job is in progress/completed
-  const showVideoPanel = Boolean(videoUrl || (renderJob && renderJob.status === 'completed'));
+  // Video panel is only visible when we have a video URL or a render job is in progress
+  const showVideoPanel = Boolean(videoUrl || polling);
 
   return (
     <StudioShell className="h-screen" ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
@@ -709,9 +758,12 @@ export default function AnimationStudio() {
 
           <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl">
             {/* Main Content Split: Top (Workspace) / Bottom (Video) */}
-            <div className="flex h-full flex-col">
+            <div className="flex h-full flex-col relative" ref={containerRef}>
               {/* Top: Preview/Code/JSON */}
-              <div className={`flex w-full overflow-hidden transition-all duration-300 ease-in-out ${showVideoPanel ? 'h-3/5' : 'h-full'}`}>
+              <div
+                className="flex w-full overflow-hidden"
+                style={{ height: showVideoPanel ? `${topSectionHeight}%` : '100%' }}
+              >
                 <div className="h-full w-full overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                   {currentAnimation ? (
                     <Workspace
@@ -728,6 +780,7 @@ export default function AnimationStudio() {
                       copiedCode={copiedCode}
                       audioConfig={audioConfig}
                       onAudioConfigChange={setAudioConfig}
+                      onAnimationChange={handleAnimationChange}
                     />
                   ) : (
                     <EmptyWorkspace
@@ -739,9 +792,22 @@ export default function AnimationStudio() {
                 </div>
               </div>
 
+              {/* Resizer Handle */}
+              {showVideoPanel && (
+                <div
+                  className="relative float-left z-10 flex h-3 w-full cursor-row-resize items-center justify-center border-y border-white/5 bg-[#0b0c15] hover:bg-indigo-500/10 transition-colors group select-none"
+                  onMouseDown={handleDragStart}
+                >
+                  <div className="h-1 w-12 rounded-full bg-white/10 group-hover:bg-indigo-400/50 transition-colors" />
+                </div>
+              )}
+
               {/* Bottom: Video Result Panel */}
               {showVideoPanel && (
-                <div className="flex h-2/5 w-full flex-col border-t border-white/10 bg-black/40">
+                <div
+                  className="flex w-full flex-col bg-black/40"
+                  style={{ height: `calc(${100 - topSectionHeight}% - 12px)` }} // Adjust for handle height
+                >
                   <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-4 py-2">
                     <h3 className="text-xs font-medium uppercase tracking-wider text-white/70">Render Result</h3>
                     <Button variant="ghost" size="sm" onClick={() => setVideoUrl(null)} className="h-6 w-6 p-0 text-white/50 hover:text-white">

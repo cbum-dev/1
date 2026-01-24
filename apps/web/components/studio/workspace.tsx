@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Download, Sparkles, Info, Bug, Mic, Volume2 } from "lucide-react";
 import CodePanel from "./code-panel";
+import { DesignPanel } from "./design-panel";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { StudioWorkspaceProps } from "./types";
@@ -21,6 +22,7 @@ const Workspace = memo(function Workspace({
   onDownload,
   onDownloadCode,
   onCopyJson,
+  onAnimationChange,
   onCopyCode,
   copiedJson,
   copiedCode,
@@ -30,8 +32,8 @@ const Workspace = memo(function Workspace({
   const validationErrors = currentAnimation?.validation.errors ?? [];
 
   return (
-    <section className="flex flex-col gap-5">
-      <Tabs value={activeTab} onValueChange={onTabChange} className="flex flex-col gap-4">
+    <section className="flex flex-col gap-5 h-full">
+      <Tabs value={activeTab} onValueChange={onTabChange} className="flex flex-col gap-4 h-full">
         <TabsList className="w-fit rounded-full border border-white/10 bg-white/10 px-2 py-1">
           <TabsTrigger value="preview" className="rounded-full data-[state=active]:bg-white text-grey-400 data-[state=active]:text-black">
             Preview
@@ -45,9 +47,12 @@ const Workspace = memo(function Workspace({
           <TabsTrigger value="audio" className="rounded-full data-[state=active]:bg-white text-grey-400 data-[state=active]:text-black">
             Audio
           </TabsTrigger>
+          <TabsTrigger value="design" className="rounded-full data-[state=active]:bg-white text-grey-400 data-[state=active]:text-black">
+            Design
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="preview" className="mt-0">
+        <TabsContent value="preview" className="mt-0 flex-1 min-h-0 overflow-y-auto">
           <Card className="overflow-hidden border-white/10 bg-white/5 text-white">
             <CardHeader className="flex flex-col gap-3">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -106,6 +111,7 @@ const Workspace = memo(function Workspace({
             onCopy={onCopyCode}
             onDownload={onDownloadCode}
             copied={copiedCode}
+            onChange={currentAnimation ? (code) => onAnimationChange({ ...currentAnimation, manim_code: code }) : undefined}
           />
         </TabsContent>
 
@@ -152,6 +158,17 @@ const Workspace = memo(function Workspace({
                 </div>
               )}
             </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="design" className="mt-0 h-full flex-1 min-h-0">
+          <Card className="h-full border-white/10 bg-white/5 overflow-hidden rounded-2xl">
+            {currentAnimation && (
+              <DesignPanel
+                animation={currentAnimation}
+                onChange={(newIr) => onAnimationChange({ ...currentAnimation, json_ir: newIr })}
+              />
+            )}
           </Card>
         </TabsContent>
       </Tabs>

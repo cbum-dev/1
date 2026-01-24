@@ -28,6 +28,7 @@ class JobQueueService:
         output_format: str = "mp4",
         quality: str = "medium",
         project_id: Optional[str] = None,
+        manim_code: Optional[str] = None,
     ) -> RenderJob:
         """Create a new render job"""
         # Estimate duration
@@ -41,6 +42,7 @@ class JobQueueService:
             output_format=output_format,
             quality=quality,
             estimated_duration=estimated_render_time,
+            manim_code=manim_code,
         )
         
         JOB_QUEUE[job.id] = job
@@ -66,7 +68,10 @@ class JobQueueService:
             job.started_at = datetime.utcnow()
             
             # Render the animation
-            video_files = self.manim_service.render_scenes(job.animation_ir)
+            if job.manim_code:
+                video_files = self.manim_service.render_custom_code(job.manim_code)
+            else:
+                video_files = self.manim_service.render_scenes(job.animation_ir)
             
             # Merge videos
             import os

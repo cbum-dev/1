@@ -222,6 +222,7 @@ export async function queueRenderJob(
     output_format?: string;
     quality?: string;
     project_id?: string;
+    manim_code?: string;
   },
   token: string
 ): Promise<RenderJob> {

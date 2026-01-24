@@ -660,7 +660,8 @@ async def queue_render_job(
         animation_ir=request.animation_ir,
         output_format=request.output_format,
         quality=request.quality,
-        project_id=request.project_id
+        project_id=request.project_id,
+        manim_code=request.manim_code
     )
     
     return {

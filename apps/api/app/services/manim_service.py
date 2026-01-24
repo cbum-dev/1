@@ -183,6 +183,73 @@ class DynamicScene{scene_index}(Scene):
             return f'self.play(Rotate({obj_id}, angle={anim.angle or 0.0}*DEGREES), run_time={anim.duration})'
         return ""
     
+    def render_custom_code(self, code: str) -> list[str]:
+        """
+        Render custom Manim code.
+        Returns list of video file paths.
+        """
+        import time
+        timestamp = int(time.time() * 1000)
+        filename = f"custom_{timestamp}"
+        temp_file = os.path.join(settings.TEMP_DIR, f"{filename}.py")
+        
+        with open(temp_file, 'w') as f:
+            f.write(code)
+            
+        cmd = [
+            'manim',
+            '-ql',
+            '--disable_caching',
+            temp_file,
+            '-a' # Render all scenes
+        ]
+        
+        try:
+            subprocess.run(
+                cmd,
+                cwd=settings.TEMP_DIR,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Find output files
+            # Manim output structure: media/videos/{filename}/{quality}/*.mp4
+            quality_dir = "480p15" # -ql corresponds to 480p15
+            output_dir = os.path.join(settings.TEMP_DIR, 'media', 'videos', filename, quality_dir)
+            
+            if not os.path.exists(output_dir):
+                 # Try to find any directory inside videos/filename
+                 base_video_dir = os.path.join(settings.TEMP_DIR, 'media', 'videos', filename)
+                 if os.path.exists(base_video_dir):
+                     subdirs = [d for d in os.listdir(base_video_dir) if os.path.isdir(os.path.join(base_video_dir, d))]
+                     if subdirs:
+                         output_dir = os.path.join(base_video_dir, subdirs[0])
+            
+            if not os.path.exists(output_dir):
+                 raise RuntimeError(f"No output directory found at {output_dir}")
+                 
+            video_files = []
+            for f in os.listdir(output_dir):
+                if f.endswith('.mp4'):
+                    # Move to TEMP_DIR root to match other logic
+                    src = os.path.join(output_dir, f)
+                    dst = os.path.join(settings.TEMP_DIR, f"{filename}_{f}")
+                    os.rename(src, dst)
+                    video_files.append(dst)
+            
+            if not video_files:
+                raise RuntimeError("No video files generated")
+            
+            # Sort to ensure consistent order (though -a order might be file order)
+            return sorted(video_files)
+            
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Manim rendering failed: {e.stderr}")
+        finally:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+
     def render_scenes(self, animation_ir: AnimationIR) -> list[str]:
         """
         Render all scenes from IR.

@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -13,18 +14,18 @@ class Settings(BaseSettings):
     TEMP_DIR: str = "/tmp/animations"
     
 
-    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
+    JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 60 * 24 * 7  
     
 
-    DATABASE_URL: str = "postgresql://localhost/animation_studio"
+    DATABASE_URL: str
     DEBUG: bool = False
     
 
-    STRIPE_SECRET_KEY: str = "sk_test_..."
-    STRIPE_PUBLISHABLE_KEY: str = "pk_test_..."
-    STRIPE_WEBHOOK_SECRET: str = "whsec_..."
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
     
 
     RATE_LIMIT_PER_MINUTE: int = 20

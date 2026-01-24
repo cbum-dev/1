@@ -162,6 +162,7 @@ class RenderJob(BaseModel):
     status: RenderJobStatus = RenderJobStatus.PENDING
     output_format: Literal["mp4", "gif", "webm"] = "mp4"
     quality: Literal["low", "medium", "high", "4k"] = "medium"
+    manim_code: Optional[str] = None
 
     video_url: Optional[str] = None
     error_message: Optional[str] = None
@@ -176,6 +177,7 @@ class RenderQueueRequest(BaseModel):
     output_format: Literal["mp4", "gif", "webm"] = "mp4"
     quality: Literal["low", "medium", "high", "4k"] = "medium"
     project_id: Optional[str] = None
+    manim_code: Optional[str] = None
 
 
 class ChatMessage(BaseModel):

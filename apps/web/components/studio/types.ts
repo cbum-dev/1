@@ -59,6 +59,7 @@ export interface StudioWorkspaceProps {
   onDownload: () => void;
   onDownloadCode: () => void;
   onCopyJson: () => void;
+  onAnimationChange: (newAnimationState: AnimationState) => void;
   onCopyCode: () => void;
   copiedJson: boolean;
   copiedCode: boolean;
