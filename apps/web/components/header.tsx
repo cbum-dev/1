@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -13,6 +14,7 @@ export default function Header() {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Check if user has token
@@ -20,11 +22,14 @@ export default function Header() {
     setIsLoggedIn(!!token);
   }, []);
 
+
+
   const handleLogout = () => {
     removeToken();
     removeUser();
     setIsLoggedIn(false);
     setMobileMenuOpen(false);
+    router.push('/');
   };
 
   const openAuth = (mode: 'login' | 'register') => {

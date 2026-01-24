@@ -7,9 +7,12 @@ import Footer from '@/components/landing/footer';
 import CtaSection from '@/components/landing/cta-section';
 import HeroImage from '@/components/landing/hero-image';
 
+import BackendHealthBadge from '@/components/backend-health-badge';
+
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-black">
+      <BackendHealthBadge />
       <Header />
 
       <main className="flex-1">

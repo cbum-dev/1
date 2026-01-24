@@ -74,7 +74,7 @@ For the frontend, optionally set `NEXT_PUBLIC_API_URL` (defaults to `http://loca
 ```bash
 # From repo root (will activate API virtualenv first)
 pnpm run dev:api   # starts Uvicorn on http://localhost:8000
-pnpm run dev:web   # starts Next.js on http://localhost:3000
+pnpm run dev:web   # starts Next.js on https://manim-flow.vercel.app
 
 # Or launch both with Turbo + Concurrently
 pnpm run dev:all
@@ -107,7 +107,7 @@ Health endpoints:
 - `GET /health` → basic readiness check
 
 ## Frontend Application
-The Next.js UI at `http://localhost:3000` offers:
+The Next.js UI at `https://manim-flow.vercel.app` offers:
 1. **Chat panel** to describe new animations or modifications ("add a square", "make the text bigger", etc.).
 2. **Live preview tabs**:
    - Validation/status summary and natural-language description

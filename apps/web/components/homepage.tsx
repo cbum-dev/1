@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import Dither from "@/components/Dither";
@@ -12,9 +11,35 @@ import FuzzyText from "./FuzzyText";
 import Shuffle from "./Shuffle";
 import RotatingText from "./RotatingText";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/api";
+import AuthDialog from "@/components/auth-dialog";
+
 export default function HomePage() {
+  const [showAuth, setShowAuth] = useState(false);
+  const router = useRouter();
+
+  const handleGenerate = () => {
+    const token = getToken();
+    if (token) {
+      router.push("/studio");
+    } else {
+      setShowAuth(true);
+    }
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-black text-white">
+      <AuthDialog
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+        onSuccess={() => {
+          setShowAuth(false);
+          router.push("/studio");
+        }}
+        defaultMode="login"
+      />
       <div className="absolute z-10 inset-0">
         <Dither
           waveSpeed={0.05}
@@ -70,11 +95,13 @@ export default function HomePage() {
           </BlurFade>
 
           <div className="mt-8 z-20 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/studio">
-              <Button size="lg" className="rounded-full cursor-pointer px-8">
-                Generate Animation <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              className="rounded-full cursor-pointer px-8"
+              onClick={handleGenerate}
+            >
+              Generate Animation <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
 
             <Button
               size="lg"

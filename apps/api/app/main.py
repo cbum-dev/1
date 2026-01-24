@@ -61,7 +61,7 @@ init_db()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "https://1-web-seven.vercel.app"],
+    allow_origins=[settings.FRONTEND_URL, "https://manim-flow.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

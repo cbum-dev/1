@@ -49,7 +49,7 @@ STRIPE_WEBHOOK_SECRET=whsec_your_secret_here
 JWT_SECRET_KEY=$(openssl rand -hex 32)
 
 # URLs
-FRONTEND_URL=https://1-web-seven.vercel.app
+FRONTEND_URL=https://manim-flow.vercel.app
 
 # Features
 ENABLE_AUTH=true
@@ -104,7 +104,7 @@ echo "  Terminal 3 (Frontend):"
 echo "    cd apps/web"
 echo "    pnpm dev"
 echo ""
-echo "  Then open: https://1-web-seven.vercel.app"
+echo "  Then open: https://manim-flow.vercel.app"
 echo ""
 echo "📚 Documentation:"
 echo "  - API Docs: http://localhost:8000/docs"
