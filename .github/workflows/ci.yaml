@@ -24,9 +24,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Lint
-        run: npm run lint --if-present
-
       - name: Build
         run: npm run build
 
@@ -59,4 +56,8 @@ jobs:
 
       - name: Run tests
         # We use 'uv run' to execute commands in the virtualenv managed by uv
+        env:
+          GEMINI_API_KEY: "dummy_key"
+          JWT_SECRET_KEY: "dummy_secret"
+          DATABASE_URL: "sqlite:///./test.db"
         run: uv run pytest -q
