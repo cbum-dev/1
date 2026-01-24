@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDebouncedCallback } from 'use-debounce';
+import { useToast } from './ui/use-toast';
 import AuthDialog from './auth-dialog';
 import StudioShell from './studio/studio-shell';
 import Sidebar from './studio/sidebar';
@@ -121,6 +123,8 @@ export default function AnimationStudio() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const router = useRouter();
+  const toast = useToast();
 
   // Autosave logic
   const debouncedSave = useDebouncedCallback(async () => {
@@ -272,6 +276,7 @@ export default function AnimationStudio() {
       loadUserHistory(token);
       loadTemplates(token);
     } else {
+      setShowAuth(true); // Force auth dialog
       loadTemplates();
     }
   }, [loadTemplates, loadUserHistory, loadUserLimits]);
@@ -380,9 +385,15 @@ export default function AnimationStudio() {
     } catch (error: any) {
       console.error('Chat error:', error);
       const message = error?.message?.toString().toLowerCase() ?? '';
+
       if (message.includes('401') || message.includes('authentication')) {
+        toast.error("Session expired", "Please sign in again to continue.");
         handleLogout();
         setShowAuth(true);
+      } else if (message.includes('credit') || message.includes('quota') || message.includes('402')) {
+        toast.error("Out of credits", "You need more credits to generate this animation.");
+      } else {
+        toast.error("Message failed", "Unable to process your request. Please try again.");
       }
     } finally {
       setSendingMessage(false);
@@ -428,12 +439,11 @@ export default function AnimationStudio() {
       await loadUserHistory(token);
       setSidebarView('history');
       if (!currentConversationId) {
-        // Only show alert for manual first save
-        window.alert('Conversation saved successfully!');
+        toast.success("Conversation saved", "Your progress has been saved successfully.");
       }
     } catch (error) {
       console.error('Save error:', error);
-      window.alert('Failed to save conversation');
+      toast.error("Save failed", "Could not save your conversation. Please try again.");
     } finally {
       setSavingConversation(false);
     }
@@ -458,7 +468,7 @@ export default function AnimationStudio() {
       setSidebarView('history');
     } catch (error) {
       console.error('Load error:', error);
-      window.alert('Failed to load conversation');
+      toast.error("Load failed", "Could not load the conversation. It may be deleted or inaccessible.");
     } finally {
       setSendingMessage(false);
     }
@@ -479,7 +489,7 @@ export default function AnimationStudio() {
       }
     } catch (error) {
       console.error('Delete error:', error);
-      window.alert('Failed to delete conversation');
+      toast.error("Delete failed", "Could not delete the conversation.");
     }
   };
 
@@ -527,8 +537,14 @@ export default function AnimationStudio() {
       setPolling(true);
       setActiveTab('video');
       pollJobStatus(job.job_id, token);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Render error:', error);
+      const msg = error?.message?.toLowerCase() ?? '';
+      if (msg.includes('credit') || msg.includes('402')) {
+        toast.error("Out of credits", "You need more credits to render this video.");
+      } else {
+        toast.error("Render failed", "Could not start the rendering job. Please try again.");
+      }
     }
   };
 
@@ -639,7 +655,15 @@ export default function AnimationStudio() {
 
   return (
     <StudioShell className="h-screen" ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
-      {showAuth && <AuthDialog onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />}
+      {showAuth && (
+        <AuthDialog
+          onClose={() => {
+            setShowAuth(false);
+            if (!user) router.push('/');
+          }}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
       <WorkspaceAccessDialog
         open={showAccessDialog}
         onOpenChange={setShowAccessDialog}

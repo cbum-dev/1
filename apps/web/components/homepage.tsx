@@ -70,9 +70,11 @@ export default function HomePage() {
           </BlurFade>
 
           <div className="mt-8 z-20 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="rounded-full cursor-pointer px-8">
-              Generate Animation <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <Link href="/studio">
+              <Button size="lg" className="rounded-full cursor-pointer px-8">
+                Generate Animation <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
 
             <Button
               size="lg"

@@ -47,9 +47,11 @@ export default function Header() {
             <Link href="/" className="hover:text-white transition cursor-pointer">
               Home
             </Link>
-            <Link href="/studio" className="hover:text-white transition cursor-pointer">
-              Studio
-            </Link>
+            {isLoggedIn && (
+              <Link href="/studio" className="hover:text-white transition cursor-pointer">
+                Studio
+              </Link>
+            )}
             <Link href="/docs" className="hover:text-white transition cursor-pointer">
               Docs
             </Link>
@@ -97,9 +99,11 @@ export default function Header() {
             <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-medium text-white/90 hover:text-white">
               Home
             </Link>
-            <Link href="/studio" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-medium text-white/90 hover:text-white">
-              Studio
-            </Link>
+            {isLoggedIn && (
+              <Link href="/studio" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-medium text-white/90 hover:text-white">
+                Studio
+              </Link>
+            )}
             <Link href="/docs" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-medium text-white/90 hover:text-white">
               Docs
             </Link>
