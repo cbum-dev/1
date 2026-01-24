@@ -57,6 +57,7 @@ export interface StudioWorkspaceProps {
   renderJob: RenderJob | null;
   videoUrl: string | null;
   onDownload: () => void;
+  onDownloadCode: () => void;
   onCopyJson: () => void;
   onCopyCode: () => void;
   copiedJson: boolean;
@@ -75,6 +76,8 @@ export interface StudioHeaderProps {
   user: StudioUser | null;
   onNewChat: () => void;
   onViewAccess: () => void;
+  currentStyle?: string;
+  onStyleChange?: (style: string) => void;
 }
 
 export interface StudioChatProps {

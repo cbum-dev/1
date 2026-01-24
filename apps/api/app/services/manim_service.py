@@ -8,6 +8,34 @@ from ..config import get_settings
 settings = get_settings()
 
 
+# Style Presets
+STYLES = {
+    "default": {
+        "bg": None, # Use scene default
+        "text": "#ffffff",
+        "math": "#ffffff",
+        "primary": "#ffffff"
+    },
+    "cyberpunk": {
+        "bg": "#050510",
+        "text": "#00ff9f", # Neon Green
+        "math": "#ff0055", # Neon Red/Pink
+        "primary": "#00dbff" # Neon Blue
+    },
+    "chalkboard": {
+        "bg": "#2b3d2b", # Dark Green
+        "text": "#eeeeee", # Chalk white
+        "math": "#dddddd",
+        "primary": "#ffffff"
+    },
+    "light": {
+        "bg": "#ffffff",
+        "text": "#000000",
+        "math": "#000000",
+        "primary": "#000000"
+    }
+}
+
 class ManimService:
     """Service to render individual scenes using Manim"""
     
@@ -15,7 +43,7 @@ class ManimService:
         self.quality = settings.MANIM_QUALITY
         os.makedirs(settings.TEMP_DIR, exist_ok=True)
     
-    def render_scene(self, scene_data: SceneModel, scene_index: int) -> str:
+    def render_scene(self, scene_data: SceneModel, scene_index: int, style: str = "default") -> str:
         """
         Render a single scene to video file.
         Returns path to rendered video.
@@ -27,7 +55,7 @@ class ManimService:
         
         output_name = f"scene_{scene_index:03d}_{scene_data.scene_id}"
         
-        scene_code = self._generate_scene_code(scene_data, scene_index)
+        scene_code = self._generate_scene_code(scene_data, scene_index, style)
         with open(temp_scene_file, 'w') as f:
             f.write(scene_code)
         
@@ -68,13 +96,19 @@ class ManimService:
             if os.path.exists(temp_scene_file):
                 os.remove(temp_scene_file)
     
-    def _generate_scene_code(self, scene_data: SceneModel, scene_index: int) -> str:
+    def _generate_scene_code(self, scene_data: SceneModel, scene_index: int, style: str = "default") -> str:
         """Generate Python code for a Manim scene"""
+        style_config = STYLES.get(style, STYLES["default"])
+        bg_color = style_config["bg"] if style_config["bg"] else scene_data.background_color
+        
         code = f"""from manim import *
 
 class DynamicScene{scene_index}(Scene):
     def construct(self):
-        self.camera.background_color = "{scene_data.background_color}"
+        self.camera.background_color = "{bg_color}"
+        Text.set_default(color="{style_config['text']}")
+        MathTex.set_default(color="{style_config['math']}")
+        VMobject.set_default(color="{style_config['primary']}")
         
 """
         
@@ -155,9 +189,10 @@ class DynamicScene{scene_index}(Scene):
         Returns list of video file paths.
         """
         video_files = []
+        style = animation_ir.style or "default"
         
         for i, scene in enumerate(animation_ir.scenes):
-            video_file = self.render_scene(scene, i)
+            video_file = self.render_scene(scene, i, style)
             video_files.append(video_file)
         
         return video_files
@@ -168,9 +203,10 @@ class DynamicScene{scene_index}(Scene):
         Returns the full code as a string without rendering.
         """
         code_parts = ["from manim import *\n\n"]
+        style = animation_ir.style or "default"
         
         for i, scene in enumerate(animation_ir.scenes):
-            code_parts.append(self._generate_scene_code(scene, i))
+            code_parts.append(self._generate_scene_code(scene, i, style))
             code_parts.append("\n\n")
         
         code_parts.append('if __name__ == "__main__":\n')

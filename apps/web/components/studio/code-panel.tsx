@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, CheckCircle } from "lucide-react";
+import { Copy, CheckCircle, Download } from "lucide-react";
 import { motion } from "motion/react";
 import Highlight, { defaultProps, type Language, type RenderProps } from "prism-react-renderer";
 import nightOwl from "prism-react-renderer/themes/nightOwl";
@@ -13,6 +13,7 @@ interface CodePanelProps {
   code: string;
   language?: string;
   onCopy?: () => void;
+  onDownload?: () => void;
   copied?: boolean;
   className?: string;
 }
@@ -28,6 +29,7 @@ const CodePanel = memo(function CodePanel({
   code,
   language,
   onCopy,
+  onDownload,
   copied,
   className,
 }: CodePanelProps) {
@@ -53,26 +55,39 @@ const CodePanel = memo(function CodePanel({
             </span>
           )}
         </div>
-        {onCopy && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onCopy}
-            className="h-8 gap-2 border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
-          >
-            {copied ? (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy
-              </>
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {onDownload && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onDownload}
+              className="h-8 gap-2 border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Save</span>
+            </Button>
+          )}
+          {onCopy && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onCopy}
+              className="h-8 gap-2 border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="relative flex max-h-[520px] overflow-auto bg-[#011627]">

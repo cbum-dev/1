@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RotateCcw, Play, CheckCircle2 } from "lucide-react";
+import { Sparkles, RotateCcw, Play, CheckCircle2, Palette } from "lucide-react";
 import { StudioHeaderProps } from "./types";
 
 const statusCopy = {
@@ -21,10 +21,13 @@ const Header = memo(function Header({
   user,
   onNewChat,
   onViewAccess,
+  currentStyle = "default",
+  onStyleChange,
 }: StudioHeaderProps) {
   return (
     <header className="flex flex-shrink-0 flex-col gap-4 rounded-3xl border border-white/10 bg-black/40 px-6 py-4 backdrop-blur-md md:flex-row md:items-center md:justify-between">
       <div className="flex items-center gap-4">
+        {/* ... Logo area kept same ... */}
         <div className="flex items-center gap-2 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-2 text-indigo-300">
           <Sparkles className="h-5 w-5" />
         </div>
@@ -63,7 +66,23 @@ const Header = memo(function Header({
         layout
         className="flex flex-col gap-2 md:flex-row md:items-center"
       >
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-3">
+          {onStyleChange && (
+            <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 transition-colors hover:bg-white/10">
+              <Palette className="h-3.5 w-3.5 text-white/60" />
+              <select
+                value={currentStyle}
+                onChange={(e) => onStyleChange(e.target.value)}
+                className="bg-transparent text-xs font-medium text-white outline-none cursor-pointer"
+              >
+                <option value="default" className="bg-zinc-900 text-white">Default</option>
+                <option value="cyberpunk" className="bg-zinc-900 text-white">Cyberpunk</option>
+                <option value="chalkboard" className="bg-zinc-900 text-white">Chalkboard</option>
+                <option value="light" className="bg-zinc-900 text-white">Light Mode</option>
+              </select>
+            </div>
+          )}
+
           {currentAnimation && (
             <Button
               variant="ghost"

@@ -122,58 +122,33 @@ export default function AnimationStudio() {
   const [polling, setPolling] = useState(false);
   const [audioConfig, setAudioConfig] = useState<AudioConfig>({
     enabled: false,
-    text: '',
-    voice: 'en',
+    text: "",
+    voice: "en",
   });
+
+  const [currentStyle, setCurrentStyle] = useState("default");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const router = useRouter();
   const toast = useToast();
 
-  // Autosave logic
-  const debouncedSave = useDebouncedCallback(async () => {
-    if (!user || !currentAnimation || messages.length === 0) return;
+  const handleDownloadCode = () => {
+    if (!currentAnimation?.manim_code) return;
 
-    // Don't auto-save if we don't have a conversation ID yet (first save should be explicit or handled differently)
-    // Wait, let's actually make it auto-save even for new ones if we want seamlessness, 
-    // but usually "Save as new" is better for the first time. 
-    // For now, let's autosave ONLY if we already have an ID (checking `currentConversationId`).
-    // For now, let's autosave ONLY if we already have an ID (checking `currentConversationId`).
-    if (!currentConversationId) return;
+    const blob = new Blob([currentAnimation.manim_code], { type: "text/x-python" });
+    const url = URL.createObjectURL(blob);
 
-    const token = getToken();
-    if (!token) return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "scene.py";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    setSavingConversation(true);
-    try {
-      const title = messages[0]?.content.slice(0, 50) || 'Untitled Animation';
-      await updateProject(
-        currentConversationId,
-        title,
-        currentAnimation.description || '',
-        currentAnimation.json_ir,
-        messages,
-        token
-      );
-      // Refresh history silently
-      const [conversations] = await Promise.all([getUserConversations(token)]);
-      setSavedConversations(conversations);
-    } catch (err) {
-      console.error("Autosave failed", err);
-    } finally {
-      setSavingConversation(false);
-    }
-  }, 5000);
-
-  // Trigger autosave when relevant state changes
-  useEffect(() => {
-    if (currentConversationId) {
-      debouncedSave();
-    }
-  }, [messages, currentAnimation, currentConversationId, debouncedSave]);
-
-
+    URL.revokeObjectURL(url); // ✅ cleanup
+  };
   const clearVideoUrl = useCallback(() => {
     setVideoUrl((prev) => {
       if (prev) {
@@ -534,6 +509,7 @@ export default function AnimationStudio() {
       if (audioConfig.enabled) {
         irPayload.audio = audioConfig;
       }
+      irPayload.style = currentStyle;
 
       const job = await queueRenderJob(
         irPayload,
@@ -726,7 +702,9 @@ export default function AnimationStudio() {
             rendering={polling}
             user={user}
             onNewChat={handleReset}
-            onViewAccess={handleViewAccess}
+            onViewAccess={() => setShowAccessDialog(true)}
+            currentStyle={currentStyle}
+            onStyleChange={setCurrentStyle}
           />
 
           <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/20 backdrop-blur-xl">
@@ -743,6 +721,7 @@ export default function AnimationStudio() {
                       renderJob={renderJob}
                       videoUrl={null} // Video is now separate
                       onDownload={handleDownload} // Disabled in workspace, moved to panel
+                      onDownloadCode={handleDownloadCode}
                       onCopyJson={handleCopyJson}
                       onCopyCode={handleCopyCode}
                       copiedJson={copiedJson}

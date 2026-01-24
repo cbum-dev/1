@@ -19,6 +19,7 @@ const Workspace = memo(function Workspace({
   renderJob,
   videoUrl,
   onDownload,
+  onDownloadCode,
   onCopyJson,
   onCopyCode,
   copiedJson,
@@ -103,6 +104,7 @@ const Workspace = memo(function Workspace({
             code={currentAnimation?.manim_code ?? ""}
             language="python"
             onCopy={onCopyCode}
+            onDownload={onDownloadCode}
             copied={copiedCode}
           />
         </TabsContent>
