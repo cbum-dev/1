@@ -32,7 +32,7 @@ env/
 
 # uv
 .uv/
-uv.lock
+
 
 # Next.js
 .next/

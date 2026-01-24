@@ -12,6 +12,21 @@ export interface BentoCardProps {
   icon?: React.ReactNode;
 }
 
+export interface BentoProps {
+  cards?: BentoCardProps[];
+  textAutoHide?: boolean;
+  enableStars?: boolean;
+  enableSpotlight?: boolean;
+  enableBorderGlow?: boolean;
+  disableAnimations?: boolean;
+  spotlightRadius?: number;
+  particleCount?: number;
+  enableTilt?: boolean;
+  glowColor?: string;
+  clickEffect?: boolean;
+  enableMagnetism?: boolean;
+}
+
 // ... (Rest of file interface)
 
 
@@ -189,7 +204,7 @@ const ParticleCard: React.FC<{
             yoyo: true
           });
         }, index * 100);
-
+        // @ts-ignore
         timeoutsRef.current.push(timeoutId);
       });
     }, [initializeParticles]);
@@ -508,7 +523,7 @@ const useMobileDetection = () => {
 
   return isMobile;
 };
-
+//@ts-ignore
 const MagicBento: React.FC<BentoProps> = ({
   cards = cardData,
   textAutoHide = true,
@@ -669,7 +684,7 @@ const MagicBento: React.FC<BentoProps> = ({
 
       <BentoCardGrid gridRef={gridRef}>
         <div className="card-responsive w-full grid gap-2">
-          {cards.map((card, index) => {
+          {cards.map((card: BentoCardProps, index: number) => {
             const baseClassName = `card group flex flex-col justify-between relative aspect-[4/3] min-h-[200px] w-full max-w-full p-5 rounded-[20px] border border-solid font-light overflow-hidden transition-colors duration-300 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)] ${enableBorderGlow ? 'card--border-glow' : ''
               }`;
 

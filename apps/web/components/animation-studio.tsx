@@ -38,7 +38,7 @@ import {
 import { AnimationState, StudioUser, AudioConfig } from './studio/types';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://one-y13j.onrender.com/';
 
 type StudioTab = 'preview' | 'json' | 'code' | 'video' | 'audio';
 
@@ -691,15 +691,6 @@ export default function AnimationStudio() {
 
   return (
     <StudioShell className="h-screen" ambient={<AmbientBackdrop />} overlay={<OverlayGrid />}>
-      {showAuth && (
-        <AuthDialog
-          onClose={() => {
-            setShowAuth(false);
-            if (!user) router.push('/');
-          }}
-          onSuccess={handleAuthSuccess}
-        />
-      )}
       <WorkspaceAccessDialog
         open={showAccessDialog}
         onOpenChange={setShowAccessDialog}

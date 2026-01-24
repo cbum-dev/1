@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://one-y13j.onrender.com/';
 
 async function parseJsonSafe<T>(response: Response): Promise<T | null> {
   const text = await response.text();
